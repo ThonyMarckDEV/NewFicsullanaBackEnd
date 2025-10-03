@@ -28,7 +28,7 @@ return new class extends Migration
             $table->tinyInteger('estado')->comment('1:vigente , 2:cancelado , 3:liquidado');
             $table->timestamps();
 
-            $table->foreign('id_Producto')->references('id')->on('productos')->onDelete('set null');
+            $table->foreign('id_Producto')->references('id')->on('productos');
             $table->foreign('id_Cliente')->references('id')->on('usuarios');
             $table->foreign('id_Asesor')->references('id')->on('usuarios');
         });
@@ -65,7 +65,7 @@ return new class extends Migration
             $table->decimal('excedente', 10, 2)->default(0);
             $table->date('fecha_pago');
             $table->text('observaciones')->nullable();
-            $table->unsignedBigInteger('idUsuario');
+            $table->unsignedBigInteger('id_Usuario');
             $table->string('modalidad')->comment('PRESENCIAL , VIRTUAL');
             $table->timestamps();
             
