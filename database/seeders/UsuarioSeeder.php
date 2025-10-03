@@ -27,7 +27,7 @@ class UsuarioSeeder extends Seeder
             'profesion' => 'Ing. Sofware',
             'enfermedadesPreexistentes' => 0,
             'ruc' => null,
-            'expuesta' => 0,
+            'expuestaPoliticamente' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -37,7 +37,7 @@ class UsuarioSeeder extends Seeder
             'username' => 'carlosguevara',
             'password' => Hash::make('123456'),
             'id_Datos' => $idDato,
-            'id_Rol' => 4, // Rol asesor
+            'id_Rol' => 1, // Rol Admin
             'estado' => 1,
             'created_at' => now(),
             'updated_at' => now(),
