@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 
 use App\Http\Controllers\Auth\ResetPassword\PasswordResetController;
 use App\Http\Controllers\Cliente\ClienteController;
+use App\Http\Controllers\Empleado\EmpleadoController;
 use App\Http\Controllers\Producto\ProductoController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,13 @@ Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () {
     Route::get('/productos/index', [ProductoController::class, 'index']);
     Route::post('/producto/store', [ProductoController::class, 'store']);
     Route::put('/producto/update/{producto}', [ProductoController::class, 'update']); 
+
+    //RUTAS CRUD EMPLEADO
+    Route::get('/empleados/index', [EmpleadoController::class, 'index']);
+    Route::post('/empleado/store', [EmpleadoController::class, 'store']);
+    Route::get('/empleado/show/{empleado}', [EmpleadoController::class, 'show']);
+    Route::put('/empleado/update/{empleado}', [EmpleadoController::class, 'update']);
+    Route::patch('/empleado/toggleEstado/{empleado}', [EmpleadoController::class, 'toggleEstado']);
     
 });
 
