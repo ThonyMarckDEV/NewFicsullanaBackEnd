@@ -22,6 +22,8 @@ Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () {
     Route::get('/clientes/index', [ClienteController::class, 'index']);
     Route::get('/cliente/show/{cliente}', [ClienteController::class, 'show']);
     Route::put('/cliente/update/{cliente}', [ClienteController::class, 'update']);
+    Route::patch('/cliente/cambiar-estado/{cliente}', [ClienteController::class, 'toggleEstado']);
+    
 });
 
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)

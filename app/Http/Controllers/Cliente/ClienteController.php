@@ -157,6 +157,36 @@ class ClienteController extends Controller
         }
     }
 
+
+    public function toggleEstado(Request $request, User $cliente): JsonResponse
+    {
+        // 1. Validar el estado que se recibe (0 o 1)
+        $request->validate([
+            'estado' => 'required|boolean',
+        ]);
+
+        try {
+            // 2. Actualizar el estado del cliente (el modelo User)
+            $cliente->estado = $request->estado;
+            $cliente->save();
+            
+            // Determinar el mensaje de éxito
+            $mensaje = $request->estado == 1 ? 'Cliente activado exitosamente.' : 'Cliente inactivado exitosamente.';
+
+            return response()->json([
+                'type' => 'success',
+                'message' => $mensaje,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Ocurrió un error al cambiar el estado del cliente.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * Remove the specified resource from storage.
      */
