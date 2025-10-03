@@ -88,12 +88,37 @@ class ClienteController extends Controller
     }
 
     /**
-     * Muestra toda la información de un cliente específico.
+     * Muestra toda la información de un cliente específico, buscando por ID o DNI.
      */
-    public function show(User $cliente): JsonResponse
+    public function show($identifier): JsonResponse
     {
+        // ID del rol de Cliente
+        $CLIENTE_ROL_ID = 2;
+        
         try {
-            // 1. Cargamos las relaciones como antes.
+            // Limpiamos el identificador por si se pasan espacios.
+            $identifier = trim($identifier);
+
+            // 1. Determinar el tipo de búsqueda
+            $isDniOrRuc = is_numeric($identifier) && strlen($identifier) >= 8;
+
+            // 2. Buscar el cliente (aplicando filtro de rol)
+            if ($isDniOrRuc) {
+                // Buscamos en la tabla 'datos' por la columna 'dni' Y aseguramos que el usuario sea rol 2
+                $cliente = User::where('id_Rol', $CLIENTE_ROL_ID) // <--- FILTRO AGREGADO
+                    ->whereHas('datos', function ($query) use ($identifier) {
+                        $query->where('dni', $identifier); 
+                    })
+                    ->firstOrFail();
+
+            } else {
+                // Si tiene menos de 8 dígitos o no es numérico, lo tratamos como el ID del usuario.
+                // Buscamos por ID Y aseguramos que el usuario sea rol 2
+                $cliente = User::where('id_Rol', $CLIENTE_ROL_ID) // <--- FILTRO AGREGADO
+                                ->findOrFail($identifier);
+            }
+
+            // 3. Cargamos las relaciones
             $cliente->load([
                 'datos.direcciones',
                 'datos.contactos',
@@ -102,34 +127,36 @@ class ClienteController extends Controller
                 'avales'
             ]);
 
-            // 2. Construimos la estructura plana que necesita el frontend.
+            // 4. Construimos la estructura plana para el frontend.
             $clienteProcesado = [
                 'id' => $cliente->id,
                 'username' => $cliente->username,
                 'estado' => $cliente->estado,
                 'datos' => $cliente->datos->getAttributes(),
-                'direcciones' => $cliente->datos->direcciones,
-                'contactos' => $cliente->datos->contactos,
-                'empleos' => $cliente->datos->empleos,
-                'cuentas_bancarias' => $cliente->datos->cuentasBancarias,
-                'avales' => $cliente->avales,
+                // Usamos ->first() para aplanar las colecciones de "one-to-one"
+                'direcciones' => $cliente->datos->direcciones->first() ?? null,
+                'contactos' => $cliente->datos->contactos->first() ?? null,
+                'empleos' => $cliente->datos->empleos->first() ?? null,
+                'cuentas_bancarias' => $cliente->datos->cuentasBancarias->first() ?? null,
+                'avales' => $cliente->avales, 
             ];
-
-            // ===============================================================
-            // === CAMBIO CLAVE AQUÍ ===
-            // Envolvemos la respuesta en un objeto con la propiedad 'data'.
-            // ===============================================================
+            
+            // 5. Devolvemos la respuesta
             return response()->json([
                 'type'    => 'success',
                 'message' => 'Cliente encontrado.',
-                'data'    => $clienteProcesado // <-- AQUÍ ESTÁ LA MAGIA
+                'data'    => $clienteProcesado 
             ]);
 
-        } catch (Exception $e) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Devuelve 404 si el cliente no se encuentra O si se encuentra pero NO es rol 2
             return response()->json(['message' => 'Cliente no encontrado.'], 404);
+        } catch (Exception $e) {
+            // \Log::error("Error al buscar cliente: " . $e->getMessage()); 
+            return response()->json(['message' => 'Ocurrió un error en el servidor.'], 500);
         }
     }
-
+    
     /**
      * Actualiza un cliente existente en la base de datos.
      */
