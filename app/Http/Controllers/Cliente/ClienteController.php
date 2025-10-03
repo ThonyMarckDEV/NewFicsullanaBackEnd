@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers\Cliente;
 
+use App\Http\Controllers\Cliente\utilities\ProcesarDatos;
 use App\Models\Cliente;
 usE App\Http\Controllers\Controller;
+use App\Http\Requests\StoreClienteRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use PHPUnit\Event\Exception;
 
 class ClienteController extends Controller
 {
@@ -27,9 +31,29 @@ class ClienteController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+   public function store(StoreClienteRequest $request, ProcesarDatos $procesador): JsonResponse
     {
-        //
+        try {
+            // La validación ya se ejecutó gracias a StoreClienteRequest
+            $validatedData = $request->validated();
+            
+            // Usamos la clase de utilidad para procesar y guardar los datos
+            $cliente = $procesador->crearNuevoCliente($validatedData);
+
+            return response()->json([
+                'type' => 'success',
+                'message' => 'Cliente registrado exitosamente.',
+                'data' => $cliente
+            ], 201);
+
+        } catch (Exception $e) {
+            // Si algo falla en la transacción, capturamos el error
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Ocurrió un error al registrar el cliente.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

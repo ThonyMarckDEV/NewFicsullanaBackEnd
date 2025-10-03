@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('apellidoPaternoAval');
             $table->string('apellidoMaternoAval');
             $table->string('nombresAval');
-            $table->string('telefonoFijoAval');
+            $table->string('telefonoFijoAval')->nullable();
             $table->string('telefonoMovilAval');
             $table->string('direccionAval');
             $table->string('referenciaDomicilioAval');

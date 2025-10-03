@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('contactos', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_Datos');
-            $table->enum('tipo', ['PRINCIPAL', 'SECUNDARIO'])->comment('Tipo de contacto: PRINCIPAL o SECUNDARIO');
             $table->string('telefonoMovil')->unique();
             $table->string('telefonoFijo')->nullable()->unique();
             $table->string('correo')->nullable()->unique();
