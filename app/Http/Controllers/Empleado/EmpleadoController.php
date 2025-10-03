@@ -48,31 +48,25 @@ class EmpleadoController extends Controller
     }
     
     // Almacena un nuevo empleado
-    public function store(StoreEmpleadoRequest $request)
+    public function store(StoreEmpleadoRequest $request, ProcesarDatosEmpleado $procesador)
     {
-        DB::beginTransaction();
+        // ⚠️ Se eliminó DB::beginTransaction() de aquí, ahora está en el Procesador
         try {
-            // 1. Crear el registro de Datos
-            $datos = Datos::create($request->validated());
+            $validatedData = $request->validated();
 
-            // 2. Crear el registro de Usuario (Empleado)
-            User::create([
-                'username' => $request->username,
-                'password' => Hash::make($request->password),
-                'id_Datos' => $datos->id,
-                'id_Rol' => $request->id_Rol,
-                'estado' => 1, // Por defecto activo
-            ]);
+            // 🛑 Delegamos la creación y la transacción al servicio
+            $nuevoEmpleado = $procesador->crearNuevoEmpleado($validatedData);
 
-            DB::commit();
+            // DB::commit() es manejado por DB::transaction en el servicio
 
             return response()->json([
                 'type' => 'success',
                 'message' => 'Empleado registrado exitosamente.',
+                'data' => $nuevoEmpleado // Opcional: devolver los datos del empleado creado
             ], 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            // DB::rollBack() es manejado automáticamente por DB::transaction en el servicio
             return response()->json([
                 'type' => 'error',
                 'message' => 'Ocurrió un error al registrar el empleado.',
