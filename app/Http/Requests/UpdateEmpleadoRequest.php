@@ -42,9 +42,17 @@ class UpdateEmpleadoRequest extends FormRequest
             ],
             'expuestaPoliticamente' => 'required|boolean',
 
-            // Datos de la tabla 'usuarios' (solo se permite cambiar el rol)
-            'id_Rol' => ['required', 'integer', Rule::in([3, 4])],
-            // NOTA: El password y username no se actualizan desde aquí. Se debería usar una ruta separada.
+            // Datos de la tabla 'usuarios'
+            'id_Rol' => ['required', 'integer', Rule::in([4, 5])], // Ajustado a valores del frontend: 4=Asesor, 5=Cajero
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                // Ignorar el username actual del empleado en la tabla 'users'
+                Rule::unique('usuarios', 'username')->ignore($this->empleado->id),
+            ],
+            'password' => 'nullable|min:8|confirmed',
+            'password_confirmation' => 'nullable|min:8',
         ];
     }
 }

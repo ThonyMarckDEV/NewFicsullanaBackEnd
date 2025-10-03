@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Exception;
 
-class ProcesarDatos
+class ProcesarDatosCliente
 {
     public function crearNuevoCliente(array $data)
     {

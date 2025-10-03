@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Cliente;
 
-use App\Http\Controllers\Cliente\utilities\ProcesarDatos;
+use App\Http\Controllers\Cliente\utilities\ProcesarDatosCliente;
 use App\Models\Cliente;
 usE App\Http\Controllers\Controller;
 use App\Http\Requests\StoreClienteRequest;
@@ -133,7 +133,7 @@ class ClienteController extends Controller
     /**
      * Actualiza un cliente existente en la base de datos.
      */
-    public function update(UpdateClienteRequest $request, User $cliente, ProcesarDatos $procesador): JsonResponse
+    public function update(UpdateClienteRequest $request, User $cliente, ProcesarDatosCliente $procesador): JsonResponse
     {
         try {
             $validatedData = $request->validated();

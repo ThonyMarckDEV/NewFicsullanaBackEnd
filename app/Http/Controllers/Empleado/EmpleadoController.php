@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Empleado;
 
 use App\Models\Empleado;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Empleado\utilities\ProcesarDatosEmpleado;
 use App\Http\Requests\StoreEmpleadoRequest;
 use App\Http\Requests\UpdateEmpleadoRequest;
 use App\Models\Datos;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -98,31 +100,26 @@ class EmpleadoController extends Controller
     }
 
     // Actualiza los datos de un empleado
-    public function update(UpdateEmpleadoRequest $request, User $empleado)
+    public function update(UpdateEmpleadoRequest $request, User $empleado , ProcesarDatosEmpleado $procesador)
     {
         DB::beginTransaction();
         try {
-            // 1. Actualizar Datos Personales
-            $empleado->datos->update($request->validated());
+            $validatedData = $request->validated();
 
-            // 2. Actualizar Rol
-            $empleado->update([
-                'id_Rol' => $request->id_Rol,
-            ]);
-
-            DB::commit();
+            $empleadoActualizado = $procesador->actualizarEmpleado($empleado, $validatedData);
 
             return response()->json([
                 'type' => 'success',
-                'message' => 'Datos del empleado actualizados correctamente.',
+                'message' => 'Empleado actualizado exitosamente.',
+                'data' => $empleadoActualizado
             ], 200);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
+
+        } catch (Exception $e) {
             return response()->json([
                 'type' => 'error',
-                'message' => 'Ocurrió un error al actualizar los datos.',
-                'details' => $e->getMessage(),
+                'message' => 'Ocurrió un error al actualizar el empleado.',
+                'details' => $e->getMessage()
             ], 500);
         }
     }
