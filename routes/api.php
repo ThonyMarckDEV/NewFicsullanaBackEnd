@@ -37,6 +37,8 @@ Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () {
     Route::get('/empleado/show/{empleado}', [EmpleadoController::class, 'show']);
     Route::put('/empleado/update/{empleado}', [EmpleadoController::class, 'update']);
     Route::patch('/empleado/toggleEstado/{empleado}', [EmpleadoController::class, 'toggleEstado']);
+
+    //RUTAS CRUD PRESTAMO
     
 });
 
