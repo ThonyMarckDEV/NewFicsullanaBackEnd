@@ -17,9 +17,11 @@ Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)
 Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () { 
 
-    //RUTAS CLIENTES
+    //RUTAS CRUD CLIENTES
     Route::post('/cliente/create', [ClienteController::class, 'store']);
-
+    Route::get('/clientes/index', [ClienteController::class, 'index']);
+    Route::get('/cliente/show/{cliente}', [ClienteController::class, 'show']);
+    Route::put('/cliente/update/{cliente}', [ClienteController::class, 'update']);
 });
 
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)

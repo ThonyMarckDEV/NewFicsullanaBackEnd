@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cliente\utilities;
 
 use App\Models\Datos;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Exception;
@@ -47,6 +48,31 @@ class ProcesarDatos
 
             // Devolvemos el usuario con sus datos para la respuesta
             return $usuario->load('datos');
+        });
+    }
+
+    public function actualizarCliente(User $usuario, array $data)
+    {
+        return DB::transaction(function () use ($usuario, $data) {
+            // 1. Actualizar los datos personales principales
+            $usuario->datos->update($data['datos']);
+
+            // 2. Actualizar/Crear registros relacionados (updateOrCreate es perfecto para esto)
+            $usuario->datos->direcciones()->updateOrCreate(['id_Datos' => $usuario->datos->id], $data['direcciones'] ?? []);
+            $usuario->datos->contactos()->updateOrCreate(['id_Datos' => $usuario->datos->id], $data['contactos'] ?? []);
+            $usuario->datos->empleos()->updateOrCreate(['id_Datos' => $usuario->datos->id], $data['empleo'] ?? []);
+            $usuario->datos->cuentasBancarias()->updateOrCreate(['id_Datos' => $usuario->datos->id], $data['cuentasBancarias'] ?? []);
+
+            // 3. Borrar los avales antiguos y crear los nuevos
+            $usuario->avales()->delete();
+            if (!empty($data['avales'])) {
+                foreach ($data['avales'] as $avalData) {
+                    $usuario->avales()->create($avalData);
+                }
+            }
+
+            // Refrescamos el modelo para devolver los datos actualizados
+            return $usuario->fresh()->load('datos');
         });
     }
 }
