@@ -28,11 +28,10 @@ class ProcesarDatosEmpleado
             }
 
             // C) Actualizar Contraseña (Solo si se proporciona)
-            // Esto es crucial para la edición, ya que el campo es opcional
             if (isset($data['password']) && !empty($data['password'])) {
-                // Aquí podrías agregar una validación adicional si 'password_confirmation' es requerido
+                // La validación de 'confirmed' debería haber ocurrido en UpdateEmpleadoRequest
+                // Esta verificación es redundante pero segura
                 if (!isset($data['password_confirmation']) || $data['password'] !== $data['password_confirmation']) {
-                     // Lanzar una excepción de validación si las contraseñas no coinciden.
                      throw ValidationException::withMessages([
                          'password' => ['Las contraseñas no coinciden.'],
                      ]);
@@ -47,6 +46,7 @@ class ProcesarDatosEmpleado
             }
 
             // 2. Actualizar los datos personales (tabla 'datos')
+            // ¡ESTO AHORA FUNCIONA porque prepareForValidation() anidó los datos!
             if (isset($data['datos'])) {
                 $usuario->datos->update($data['datos']);
             }

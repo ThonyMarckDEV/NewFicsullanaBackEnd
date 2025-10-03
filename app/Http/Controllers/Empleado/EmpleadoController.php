@@ -102,10 +102,11 @@ class EmpleadoController extends Controller
     // Actualiza los datos de un empleado
     public function update(UpdateEmpleadoRequest $request, User $empleado , ProcesarDatosEmpleado $procesador)
     {
-        DB::beginTransaction();
+   
         try {
             $validatedData = $request->validated();
 
+            // DB::transaction se maneja dentro del procesador
             $empleadoActualizado = $procesador->actualizarEmpleado($empleado, $validatedData);
 
             return response()->json([
@@ -115,11 +116,12 @@ class EmpleadoController extends Controller
             ], 200);
 
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            
             return response()->json([
                 'type' => 'error',
                 'message' => 'Ocurrió un error al actualizar el empleado.',
-                'details' => $e->getMessage()
+                'details' => $e->getMessage() 
             ], 500);
         }
     }
