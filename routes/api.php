@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 
 use App\Http\Controllers\Auth\ResetPassword\PasswordResetController;
 use App\Http\Controllers\Cliente\ClienteController;
+use App\Http\Controllers\Producto\ProductoController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -18,11 +19,16 @@ Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword
 Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () { 
 
     //RUTAS CRUD CLIENTES
-    Route::post('/cliente/create', [ClienteController::class, 'store']);
+    Route::post('/cliente/store', [ClienteController::class, 'store']);
     Route::get('/clientes/index', [ClienteController::class, 'index']);
     Route::get('/cliente/show/{cliente}', [ClienteController::class, 'show']);
     Route::put('/cliente/update/{cliente}', [ClienteController::class, 'update']);
     Route::patch('/cliente/cambiar-estado/{cliente}', [ClienteController::class, 'toggleEstado']);
+
+    //RUTAS CRUD PRODUCTO
+    Route::get('/productos/index', [ProductoController::class, 'index']);
+    Route::post('/producto/store', [ProductoController::class, 'store']);
+    Route::put('/producto/update/{producto}', [ProductoController::class, 'update']); 
     
 });
 
