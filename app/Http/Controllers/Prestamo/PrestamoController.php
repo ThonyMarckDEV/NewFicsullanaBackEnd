@@ -11,11 +11,29 @@ use Illuminate\Http\Request;
 class PrestamoController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Muestra una lista paginada de préstamos, con opción de búsqueda.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $request->validate(['search' => 'nullable|string|max:20']);
+        $searchQuery = $request->input('search');
+
+        // ===== INICIO DE LA CORRECCIÓN =====
+        // La forma correcta de cargar relaciones anidadas es usando la notación de punto.
+        $prestamos = Prestamo::with(['cliente.datos', 'asesor.datos'])
+        // ===== FIN DE LA CORRECCIÓN =====
+            ->when($searchQuery, function ($query, $search) {
+                $query->where('id', 'like', "%{$search}%")
+                      ->orWhereHas('cliente.datos', function ($q) use ($search) {
+                          $q->where('dni', 'like', "%{$search}%")
+                            ->orWhere('nombre', 'like', "%{$search}%")
+                            ->orWhere('apellidoPaterno', 'like', "%{$search}%");
+                      });
+            })
+            ->latest('id')
+            ->paginate(10);
+
+        return response()->json($prestamos);
     }
 
     /**
@@ -55,11 +73,15 @@ class PrestamoController extends Controller
         }
 
     /**
-     * Display the specified resource.
+     * Muestra los detalles completos de un préstamo específico.
      */
     public function show(Prestamo $prestamo)
     {
-        //
+        // Carga todas las relaciones anidadas necesarias para el modal de detalles
+        // La notación de punto es clave: 'cliente.datos', 'asesor.datos'
+        $prestamo->load(['cliente.datos', 'asesor.datos', 'producto', 'cuota']);
+
+        return response()->json($prestamo);
     }
 
     /**

@@ -40,7 +40,9 @@ Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () {
     Route::patch('/empleado/toggleEstado/{empleado}', [EmpleadoController::class, 'toggleEstado']);
 
     //RUTAS CRUD PRESTAMO
+    Route::get('/prestamos/index', [PrestamoController::class, 'index']);
     Route::post('/prestamo/store', [PrestamoController::class, 'store']);
+    Route::get('/prestamo/show/{prestamo}', [PrestamoController::class, 'show']);
 });
 
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)
