@@ -8,16 +8,16 @@
         * { font-family: 'Helvetica', sans-serif; box-sizing: border-box; }
         body { width: 56mm; max-width: 56mm; padding: 1mm; font-size: 8px; line-height: 1.3; color: #111; }
         .header { text-align: center; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 3px; }
-        .logo { max-width: 45mm; max-height: 15mm; margin: 0 auto 3px; }
         .title { font-size: 10px; font-weight: bold; margin: 2px 0; }
         .subtitle { font-size: 8px; margin: 0; }
         .bold { font-weight: bold; }
         .section { margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 3px; }
         .item { display: table; width: 100%; margin-bottom: 2px; }
-        .label { display: table-cell; font-weight: bold; white-space: nowrap; }
+        .label { display: table-cell; font-weight: normal; white-space: nowrap; } /* Quitado el bold por defecto */
         .value { display: table-cell; text-align: right; word-break: break-all; }
         .footer { margin-top: 5px; text-align: center; font-size: 7px; padding-top: 3px; border-top: 1px dashed #000; color: #444; }
         .centered { text-align: center; }
+        .total-line { border-top: 1px dashed #999; padding-top: 2px; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -76,21 +76,28 @@
                 <span class="label">Crédito Anterior:</span>
                 <span class="value">- S/ {{ number_format($pago->cuota->excedente_anterior, 2) }}</span>
             </div>
-            <div class="item">
-                <span class="label">MONTO PAGADO:</span>
-                <span class="value bold">S/ {{ number_format($pago->monto_pagado, 2) }}</span>
-            </div>
 
             {{-- --- INICIO DE LA CORRECCIÓN --- --}}
-            {{-- Esta sección solo aparece si el pago generó un excedente --}}
+            @php
+                $totalAPagar = ($pago->cuota->monto + $pago->cuota->cargo_mora) - $pago->cuota->excedente_anterior;
+            @endphp
+            <div class="item total-line">
+                <span class="label bold">Total a Pagar:</span>
+                <span class="value bold">S/ {{ number_format(max(0, $totalAPagar), 2) }}</span>
+            </div>
+            {{-- --- FIN DE LA CORRECCIÓN --- --}}
+
+            <div class="item">
+                <span class="label bold">MONTO PAGADO:</span>
+                <span class="value bold">S/ {{ number_format($pago->monto_pagado, 2) }}</span>
+            </div>
+            
             @if ($pago->excedente > 0)
             <div class="item">
-                <span class="label">Saldo a Favor (Nuevo):</span>
+                <span class="label bold">Saldo a Favor (Nuevo):</span>
                 <span class="value bold">S/ {{ number_format($pago->excedente, 2) }}</span>
             </div>
             @endif
-            {{-- --- FIN DE LA CORRECCIÓN --- --}}
-
         </div>
     </div>
 

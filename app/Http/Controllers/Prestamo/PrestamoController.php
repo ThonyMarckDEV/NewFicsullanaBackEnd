@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Prestamo;
 
+use App\Http\Controllers\Prestamo\utilities\AdjuntarComprobanteUrl;
 use App\Http\Controllers\Prestamo\utilities\CrearCronograma;
 use App\Http\Controllers\Prestamo\utilities\CrearCuotasPrestamo;
 use App\Http\Controllers\Prestamo\utilities\EliminarCronograma;
@@ -101,13 +102,19 @@ class PrestamoController extends Controller
     }
 
     /**
-     * Muestra los detalles completos de un préstamo específico.
+     * Muestra los detalles de un préstamo, incluyendo la URL del comprobante de cada cuota pagada.
+     *
+     * @param Prestamo $prestamo
+     * @param AdjuntarComprobanteUrl $adjuntador El servicio para adjuntar las URLs.
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function show(Prestamo $prestamo)
+    public function show(Prestamo $prestamo, AdjuntarComprobanteUrl $adjuntador)
     {
-        // Carga todas las relaciones anidadas necesarias para el modal de detalles
-        // La notación de punto es clave: 'cliente.datos', 'asesor.datos'
+        // Carga las relaciones principales
         $prestamo->load(['cliente.datos', 'asesor.datos', 'producto', 'cuota']);
+
+        // 2. Delegar la lógica de adjuntar URLs al servicio
+        $adjuntador->execute($prestamo->cuota, $prestamo);
 
         return response()->json($prestamo);
     }
