@@ -29,15 +29,18 @@ class ProcesarDatosPago
             $deudaNetaCuota = max(0, ($cuota->monto + $cuota->cargo_mora) - $cuota->excedente_anterior);
             $nuevoExcedente = max(0, $montoPagadoHoy - $deudaNetaCuota);
 
-            Pago::create([
+            $pago = Pago::create([
                 'id_Cuota' => $cuota->id,
                 'monto_pagado' => $montoPagadoHoy,
                 'fecha_pago' => $validatedData['fecha_pago'],
                 'modalidad' => $validatedData['modalidad'],
-                'numero_operacion' => $validatedData['numero_operacion'] ?? null,
                 'observaciones' => $validatedData['observaciones'] ?? null,
                 'id_Usuario' => Auth::id(),
             ]);
+
+            // 2. Generar el numero_operacion usando el ID recién creado y actualizar
+            $pago->numero_operacion = str_pad($pago->id, 8, '0', STR_PAD_LEFT);
+            $pago->save();
 
             if ($montoPagadoHoy >= $deudaNetaCuota) {
                 $cuota->estado = 2; // Pagado
