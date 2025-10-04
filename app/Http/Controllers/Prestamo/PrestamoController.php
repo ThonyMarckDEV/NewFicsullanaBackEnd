@@ -10,31 +10,53 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PrestamoController extends Controller
 {
-    /**
-     * Muestra una lista paginada de préstamos, con opción de búsqueda.
-     */
     public function index(Request $request)
     {
-        $request->validate(['search' => 'nullable|string|max:20']);
-        $searchQuery = $request->input('search');
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:50',
+            'sort_by' => 'nullable|string|in:id,monto,frecuencia,fecha_generacion,estado',
+            'sort_order' => 'nullable|string|in:asc,desc',
+        ]);
 
-        // ===== INICIO DE LA CORRECCIÓN =====
-        // La forma correcta de cargar relaciones anidadas es usando la notación de punto.
+        $searchQuery = $validated['search'] ?? null;
+        $sortBy = $validated['sort_by'] ?? 'id';
+        $sortOrder = $validated['sort_order'] ?? 'desc';
+
         $prestamos = Prestamo::with(['cliente.datos', 'asesor.datos'])
-        // ===== FIN DE LA CORRECCIÓN =====
             ->when($searchQuery, function ($query, $search) {
                 $query->where('id', 'like', "%{$search}%")
-                      ->orWhereHas('cliente.datos', function ($q) use ($search) {
-                          $q->where('dni', 'like', "%{$search}%")
-                            ->orWhere('nombre', 'like', "%{$search}%")
-                            ->orWhere('apellidoPaterno', 'like', "%{$search}%");
-                      });
+                    ->orWhereHas('cliente.datos', function ($q) use ($search) {
+                        $q->where('dni', 'like', "%{$search}%")
+                        ->orWhere('nombre', 'like', "%{$search}%")
+                        ->orWhere('apellidoPaterno', 'like', "%{$search}%");
+                    });
             })
-            ->latest('id')
+            ->orderBy($sortBy, $sortOrder)
             ->paginate(10);
+        
+        // 2. Iterar sobre los resultados para añadir la URL del cronograma
+        $prestamos->getCollection()->transform(function ($prestamo) {
+            $directorio = "clientes/{$prestamo->id_Cliente}/prestamos/{$prestamo->id}/cronograma";
+            
+            // Buscar todos los archivos en el directorio
+            $archivos = Storage::disk('public')->files($directorio);
+            
+            if (!empty($archivos)) {
+                // Ordenar para encontrar el más reciente (si hay varios)
+                rsort($archivos);
+                // Asignar la URL pública del archivo más reciente
+                $prestamo->cronograma_url = Storage::url($archivos[0]);
+            } else {
+                // Si no hay archivos, asignar null
+                $prestamo->cronograma_url = null;
+            }
+            
+            return $prestamo;
+        });
 
         return response()->json($prestamos);
     }
