@@ -21,7 +21,7 @@ class StoreClienteRequest extends FormRequest
             'datos.apellidoMaterno' => 'required|string|max:100',
             'datos.apellidoConyuge' => 'nullable|string|max:100',
             'datos.estadoCivil' => ['required', 'string', Rule::in(['SOLTERO/A', 'CASADO/A', 'VIUDO/A', 'DIVORCIADO/A', 'CONVIVIENTE'])],
-            'datos.sexo' => 'required|string|in:M,F',
+            'datos.sexo' => 'required|string|in:Masculino,Femenino',
             'datos.dni' => 'required|string|digits_between:8,9|unique:datos,dni', // CORREGIDO: 8 o 9 dígitos
             'datos.fechaNacimiento' => 'required|date|before_or_equal:today',
             'datos.fechaCaducidadDni' => 'required|date|after:today',
