@@ -8,6 +8,7 @@ usE App\Http\Controllers\Controller;
 use App\Http\Requests\StoreClienteRequest;
 use App\Http\Requests\UpdateClienteRequest;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use PHPUnit\Event\Exception;
@@ -53,7 +54,7 @@ class ClienteController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-   public function store(StoreClienteRequest $request, ProcesarDatos $procesador): JsonResponse
+   public function store(StoreClienteRequest $request, ProcesarDatosCliente $procesador): JsonResponse
     {
         try {
             // La validación ya se ejecutó gracias a StoreClienteRequest
@@ -88,38 +89,14 @@ class ClienteController extends Controller
     }
 
     /**
-     * Muestra toda la información de un cliente específico, buscando por ID o DNI.
+     * Muestra toda la información de un cliente específico, sea buscado por ID o DNI.
      */
-    public function show($identifier): JsonResponse
+    public function show(User $cliente): JsonResponse
     {
-        // ID del rol de Cliente
-        $CLIENTE_ROL_ID = 2;
-        
         try {
-            // Limpiamos el identificador por si se pasan espacios.
-            $identifier = trim($identifier);
-
-            // 1. Determinar el tipo de búsqueda
-            $isDniOrRuc = is_numeric($identifier) && strlen($identifier) >= 8;
-
-            // 2. Buscar el cliente (aplicando filtro de rol)
-            if ($isDniOrRuc) {
-                // Buscamos en la tabla 'datos' por la columna 'dni' Y aseguramos que el usuario sea rol 2
-                $cliente = User::where('id_Rol', $CLIENTE_ROL_ID) // <--- FILTRO AGREGADO
-                    ->whereHas('datos', function ($query) use ($identifier) {
-                        $query->where('dni', $identifier); 
-                    })
-                    ->firstOrFail();
-
-            } else {
-                // Si tiene menos de 8 dígitos o no es numérico, lo tratamos como el ID del usuario.
-                // Buscamos por ID Y aseguramos que el usuario sea rol 2
-                $cliente = User::where('id_Rol', $CLIENTE_ROL_ID) // <--- FILTRO AGREGADO
-                                ->findOrFail($identifier);
-            }
-
-            // 3. Cargamos las relaciones
+            // 1. Cargamos TODAS las relaciones necesarias.
             $cliente->load([
+                'rol',
                 'datos.direcciones',
                 'datos.contactos',
                 'datos.empleos',
@@ -127,35 +104,92 @@ class ClienteController extends Controller
                 'avales'
             ]);
 
-            // 4. Construimos la estructura plana para el frontend.
+            // A. VALIDACIÓN DE ROL (Se mantiene)
+            // Filtrar solo usuarios con rol id 2 (cliente).
+            if (!$cliente->rol || $cliente->rol->id !== 2) {
+                return response()->json([
+                    'type'    => 'error',
+                    'message' => 'El usuario no es un cliente.',
+                ], 403);
+            }
+
+            // 2. Construimos la estructura plana con TODOS los datos,
+            // ya que la distinción DNI vs ID fue eliminada.
             $clienteProcesado = [
                 'id' => $cliente->id,
                 'username' => $cliente->username,
                 'estado' => $cliente->estado,
-                'datos' => $cliente->datos->getAttributes(),
-                // Usamos ->first() para aplanar las colecciones de "one-to-one"
-                'direcciones' => $cliente->datos->direcciones->first() ?? null,
-                'contactos' => $cliente->datos->contactos->first() ?? null,
-                'empleos' => $cliente->datos->empleos->first() ?? null,
-                'cuentas_bancarias' => $cliente->datos->cuentasBancarias->first() ?? null,
-                'avales' => $cliente->avales, 
+                
+                // Usamos getAttributes() para 'datos' y evitamos que las relaciones
+                // (direcciones, contactos, etc.) aparezcan anidadas dentro de 'datos'.
+                'datos' => optional($cliente->datos)->getAttributes(),
+                
+                // Agregamos las relaciones en el nivel superior.
+                'direcciones' => optional($cliente->datos)->direcciones,
+                'contactos' => optional($cliente->datos)->contactos,
+                'empleos' => optional($cliente->datos)->empleos,
+                'cuentas_bancarias' => optional($cliente->datos)->cuentasBancarias,
+                'avales' => $cliente->avales,
             ];
-            
-            // 5. Devolvemos la respuesta
+
+            // 3. Respuesta final exitosa.
             return response()->json([
                 'type'    => 'success',
                 'message' => 'Cliente encontrado.',
-                'data'    => $clienteProcesado 
+                'data'    => $clienteProcesado // <-- Siempre devuelve el objeto completo
             ]);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Devuelve 404 si el cliente no se encuentra O si se encuentra pero NO es rol 2
-            return response()->json(['message' => 'Cliente no encontrado.'], 404);
         } catch (Exception $e) {
-            // \Log::error("Error al buscar cliente: " . $e->getMessage()); 
-            return response()->json(['message' => 'Ocurrió un error en el servidor.'], 500);
+            // Manejo de error si el modelo User no fue encontrado por el Route Model Binding.
+            return response()->json([
+                'type'    => 'error',
+                'message' => 'Cliente no encontrado.'
+            ], 404);
         }
     }
+
+    //  /**
+    //  * Muestra toda la información de un cliente específico.
+    //  */
+    // public function show(User $cliente): JsonResponse
+    // {
+    //     try {
+    //         // 1. Cargamos las relaciones como antes.
+    //         $cliente->load([
+    //             'datos.direcciones',
+    //             'datos.contactos',
+    //             'datos.empleos',
+    //             'datos.cuentasBancarias',
+    //             'avales'
+    //         ]);
+
+    //         // 2. Construimos la estructura plana que necesita el frontend.
+    //         $clienteProcesado = [
+    //             'id' => $cliente->id,
+    //             'username' => $cliente->username,
+    //             'estado' => $cliente->estado,
+    //             'datos' => $cliente->datos->getAttributes(),
+    //             'direcciones' => $cliente->datos->direcciones,
+    //             'contactos' => $cliente->datos->contactos,
+    //             'empleos' => $cliente->datos->empleos,
+    //             'cuentas_bancarias' => $cliente->datos->cuentasBancarias,
+    //             'avales' => $cliente->avales,
+    //         ];
+
+    //         // ===============================================================
+    //         // === CAMBIO CLAVE AQUÍ ===
+    //         // Envolvemos la respuesta en un objeto con la propiedad 'data'.
+    //         // ===============================================================
+    //         return response()->json([
+    //             'type'    => 'success',
+    //             'message' => 'Cliente encontrado.',
+    //             'data'    => $clienteProcesado // <-- AQUÍ ESTÁ LA MAGIA
+    //         ]);
+
+    //     } catch (Exception $e) {
+    //         return response()->json(['message' => 'Cliente no encontrado.'], 404);
+    //     }
+    // }
     
     /**
      * Actualiza un cliente existente en la base de datos.
