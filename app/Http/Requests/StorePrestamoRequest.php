@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Prestamo; // Asegúrate de importar el modelo Prestamo
+use App\Models\Prestamo;
 
 class StorePrestamoRequest extends FormRequest
 {
@@ -31,30 +31,30 @@ class StorePrestamoRequest extends FormRequest
 
     /**
      * Configura el validador con lógica de negocio personalizada.
-     * Esta función verifica si el cliente ya tiene un préstamo vigente (estado 1).
-     *
-     * @param \Illuminate\Validation\Validator $validator
      */
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
             
-            // Solo procede si la validación de 'id_Cliente' ya pasó
             if ($this->has('id_Cliente') && !$validator->errors()->has('id_Cliente')) {
                 
-                $clienteId = $this->input('id_Cliente');
+                // ===== MODIFICACIÓN CLAVE =====
+                // Esta validación solo aplica si la modalidad es para un cliente sin préstamos activos.
+                // En el caso de 'RCS', SÍ esperamos que haya un préstamo activo.
+                if ($this->input('modalidad') !== 'RCS') {
 
-                // 1. Buscar préstamos del cliente que estén en estado VIGENTE (estado = 1)
-                $prestamoVigente = Prestamo::where('id_Cliente', $clienteId)
-                                            ->where('estado', 1) // Estado 1 = Vigente
-                                            ->exists();
+                    $clienteId = $this->input('id_Cliente');
 
-                // 2. Si se encuentra un préstamo vigente, añade el error
-                if ($prestamoVigente) {
-                    $validator->errors()->add(
-                        'id_Cliente', 
-                        'El cliente ya tiene un préstamo VIGENTE activo.'
-                    );
+                    $prestamoVigente = Prestamo::where('id_Cliente', $clienteId)
+                                                ->where('estado', 1) // Estado 1 = Vigente
+                                                ->exists();
+
+                    if ($prestamoVigente) {
+                        $validator->errors()->add(
+                            'id_Cliente', 
+                            'El cliente ya tiene un préstamo VIGENTE activo. No puede solicitar uno NUEVO o RSS.'
+                        );
+                    }
                 }
             }
         });

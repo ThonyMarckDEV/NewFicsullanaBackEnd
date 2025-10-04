@@ -92,7 +92,7 @@ class CrearCuotasPrestamo
 
         // 4. Insertar todas las cuotas
         if (!empty($cuotas)) {
-            $prestamo->cuotas()->createMany($cuotas); 
+            $prestamo->cuota()->createMany($cuotas); 
         }
     }
 }
