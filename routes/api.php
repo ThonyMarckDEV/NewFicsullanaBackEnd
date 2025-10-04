@@ -63,6 +63,7 @@ Route::middleware(['auth.jwt', 'checkRoleMW:cajero'])->group(function () {
 
     //RUTAS CRUD PAGOS
     Route::post('/pago/store', [PagoController::class, 'store']);
+    Route::post('/pago/cancelar-total', [PagoController::class, 'cancelarTotal']);
 
 });
 

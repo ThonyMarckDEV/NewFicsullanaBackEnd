@@ -3,39 +3,54 @@
 namespace App\Http\Controllers\Pago\utilities;
 
 use App\Models\Pago;
+use App\Models\Prestamo;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class GenerarComprobantePago
 {
     /**
-     * Genera y guarda un PDF del comprobante de pago en formato ticket.
+     * Genera y guarda un PDF de comprobante.
      *
-     * @param Pago $pago El modelo del pago recién creado.
-     * @return string La ruta donde se guardó el archivo.
+     * @param Pago $pago El modelo del pago.
+     * @param bool $esCancelacion Indica si es una cancelación total.
+     * @param Collection|null $cuotasCanceladas Las cuotas que se cancelaron.
+     * @return void
      */
-    public function execute(Pago $pago): string
+    public function execute(Pago $pago, bool $esCancelacion = false, ?Collection $cuotasCanceladas = null): void
     {
-        // 1. Cargar las relaciones necesarias.
-        $pago->load(['cuota.prestamo.cliente.datos', 'usuario.datos']);
+        $pago->load(['usuario.datos']);
+        $prestamo = $pago->cuota->prestamo->load('cliente.datos');
 
-        // --- CORRECCIÓN AQUÍ ---
-        // 2. Apuntar a la nueva vista de ticket.
-        $pdf = Pdf::loadView('pdfs.pagos.comprobante_pago_ticket', ['pago' => $pago]);
-        
-        // Configurar el tamaño del papel para tiquetera (58mm de ancho)
-        $pdf->setPaper([0, 0, 164.4, 841.89], 'portrait'); // 58mm en puntos
+        // 1. Decidir qué vista y datos usar
+        if ($esCancelacion) {
+            $view = 'pdfs.pagos.comprobante_cancelacion_ticket';
+            $data = ['pago' => $pago, 'prestamo' => $prestamo, 'cuotasCanceladas' => $cuotasCanceladas];
+        } else {
+            $pago->load('cuota');
+            $view = 'pdfs.pagos.comprobante_pago_ticket';
+            $data = ['pago' => $pago];
+        }
 
-        // 3. Definir la ruta y el nombre del archivo.
-        $cuota = $pago->cuota;
-        $prestamo = $cuota->prestamo;
+        // 2. Generar el PDF
+        $pdf = Pdf::loadView($view, $data)->setPaper([0, 0, 164.4, 841.89], 'portrait');
+        $pdfOutput = $pdf->output();
 
         $fileName = "comprobante-{$pago->numero_operacion}.pdf";
-        $filePath = "clientes/{$prestamo->id_Cliente}/prestamos/{$prestamo->id}/cuotas/{$cuota->id}/{$fileName}";
 
-        // 4. Guardar el PDF en el disco 'public'.
-        Storage::disk('public')->put($filePath, $pdf->output());
-
-        return $filePath;
+        // 3. Decidir dónde guardar el/los archivo(s)
+        if ($esCancelacion) {
+            // Guardar el MISMO comprobante para CADA cuota cancelada
+            foreach ($cuotasCanceladas as $cuota) {
+                $filePath = "clientes/{$prestamo->id_Cliente}/prestamos/{$prestamo->id}/cuotas/{$cuota->id}/{$fileName}";
+                Storage::disk('public')->put($filePath, $pdfOutput);
+            }
+        } else {
+            // Guardar el comprobante solo para la cuota pagada
+            $cuota = $pago->cuota;
+            $filePath = "clientes/{$prestamo->id_Cliente}/prestamos/{$prestamo->id}/cuotas/{$cuota->id}/{$fileName}";
+            Storage::disk('public')->put($filePath, $pdfOutput);
+        }
     }
 }

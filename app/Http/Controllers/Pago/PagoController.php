@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Pago;
 
+use App\Http\Controllers\Pago\utilities\ProcesarCancelacionTotal;
 use App\Http\Controllers\Pago\utilities\ProcesarDatosPago;
 use App\Http\Requests\StorePagoRequest;
 use App\Models\Cuota;
@@ -55,6 +56,30 @@ class PagoController extends Controller
             // Log::error('Error al registrar pago: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Error al registrar el pago.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+     /**
+     * Procesa la cancelación total de un préstamo.
+     */
+    public function cancelarTotal(StorePagoRequest $request, ProcesarCancelacionTotal $procesador)
+    {
+        try {
+            $validatedData = $request->validated();
+            // Para la cancelación, el 'id_Cuota' representa la ÚLTIMA cuota pendiente
+            $ultimaCuota = Cuota::findOrFail($validatedData['id_Cuota']);
+            $prestamo = $ultimaCuota->prestamo;
+
+            // Delegar la lógica de cancelación al servicio
+            $procesador->execute($validatedData, $prestamo);
+
+            return response()->json(['message' => 'Préstamo cancelado con éxito.'], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al cancelar el préstamo.',
                 'details' => $e->getMessage(),
             ], 500);
         }
