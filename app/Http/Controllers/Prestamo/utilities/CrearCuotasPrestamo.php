@@ -10,90 +10,71 @@ use Exception;
 class CrearCuotasPrestamo
 {
     /**
-     * Mapea la frecuencia a la unidad de tiempo para Carbon.
-     * @param string $frecuencia
-     * @return string
+     * Genera y guarda las cuotas para un préstamo.
+     * Esta versión corrige los errores de redondeo y calcula el campo 'otros'.
      */
-    protected function getPeriodicidad(string $frecuencia): string
+    public function generarCuotas(Prestamo $prestamo, int $cuotasPagadas = 0, ?int $cuotasAGenerar = null): void
     {
-        return match (strtoupper($frecuencia)) {
-            'SEMANAL' => 'addWeek',
-            'CATORCENAL' => 'addWeeks', // Usaremos addWeeks(2)
-            'MENSUAL' => 'addMonth',
-            default => throw new Exception("Frecuencia de pago no soportada: {$frecuencia}"),
-        };
-    }
-
-    /**
-     * Genera y guarda las cuotas para un préstamo (Lógica de Montos Fijos).
-     *
-     * Los montos fijos (capital e interés) se calculan usando los campos 'monto', 'total' y 'cuotas'
-     * del modelo Prestamo.
-     * @param Prestamo $prestamo El modelo de Préstamo con los datos necesarios.
-     * @return void
-     */
-    public function generarCuotas(Prestamo $prestamo): void
-    {
-        // 1. Obtener y calcular los montos FIJOS
         $capitalTotal = $prestamo->monto;
-        $totalPagar = $prestamo->total;
-        $numeroCuotas = $prestamo->cuotas;
-        $montoCuotaFija = $prestamo->valor_cuota;
+        $interesTotal = $prestamo->total - $prestamo->monto;
+        $numeroCuotas = $cuotasAGenerar ?? $prestamo->cuotas;
         
-        // CÁLCULO DEL INTERÉS TOTAL Y DISTRIBUCIÓN
-        $interesTotal = $totalPagar - $capitalTotal;
-        
-        // ** 1. Interés Fijo por Cuota **
-        // Se distribuye el interés total de forma equitativa en cada cuota.
+        if ($numeroCuotas <= 0) {
+            return;
+        }
+
+        $montoCuotaFija = round($prestamo->valor_cuota, 2);
+        $capitalFijo = round($capitalTotal / $numeroCuotas, 2);
         $interesFijo = round($interesTotal / $numeroCuotas, 2);
         
-        // ** 2. Capital Fijo por Cuota **
-        // Se distribuye el capital total de forma equitativa en cada cuota.
-        $capitalFijo = round($capitalTotal / $numeroCuotas, 2);
-
-        // ** 3. Otros Fijos por Cuota **
-        // Se calcula como el residuo del valor_cuota después de sumar capital e interés.
-        $otrosFijos = round($montoCuotaFija - $capitalFijo - $interesFijo, 2);
-
-
-        // 2. Preparar fechas e iteración
-        $frecuencia = $prestamo->frecuencia;
         $fechaVencimiento = Carbon::parse($prestamo->fecha_inicio);
-        $periodicidadCarbon = $this->getPeriodicidad($frecuencia);
         $cuotas = [];
 
-        // 3. Iteración para generar las cuotas
         for ($i = 1; $i <= $numeroCuotas; $i++) {
             
-            // Establecer la fecha de vencimiento
-            if ($i > 1) {
-                if ($frecuencia === 'CATORCENAL') {
-                     $fechaVencimiento->addWeeks(2);
-                } else {
-                     $fechaVencimiento->{$periodicidadCarbon}();
-                }
+            switch (strtoupper($prestamo->frecuencia)) {
+                case 'SEMANAL': $fechaVencimiento->addWeek(); break;
+                case 'CATORCENAL': $fechaVencimiento->addWeeks(2); break;
+                case 'MENSUAL': $fechaVencimiento->addMonth(); break;
+                default: throw new Exception("Frecuencia no soportada: {$prestamo->frecuencia}");
             }
 
-            // Los montos ya están calculados y son constantes.
+            if ($i === $numeroCuotas) {
+                $capitalAcumulado = $capitalFijo * ($numeroCuotas - 1);
+                $interesAcumulado = $interesFijo * ($numeroCuotas - 1);
+
+                $capitalCuota = $capitalTotal - $capitalAcumulado;
+                $interesCuota = $interesTotal - $interesAcumulado;
+                $montoCuota = $capitalCuota + $interesCuota;
+            } else {
+                $capitalCuota = $capitalFijo;
+                $interesCuota = $interesFijo;
+                $montoCuota = $montoCuotaFija;
+            }
+
+            // --- INICIO DE LA CORRECCIÓN ---
+            // 1. Calcular el valor de 'otros' para cada cuota.
+            // Es la diferencia que queda para que (capital + interes + otros) sea igual al monto de la cuota.
+            $otrosCuota = round($montoCuota - $capitalCuota - $interesCuota, 2);
+            // --- FIN DE LA CORRECCIÓN ---
 
             $cuotas[] = [
                 'id_Prestamo' => $prestamo->id,
-                'numero_cuota' => $i,
-                'monto' => $montoCuotaFija,       // Fijo del campo valor_cuota del préstamo
-                'capital' => $capitalFijo,       // Fijo: Capital Total / Cuotas
-                'interes' => $interesFijo,       // Fijo: Interés Total / Cuotas
-                'otros' => $otrosFijos,          // Fijo: Residuo para cuadrar la cuota
+                'numero_cuota' => $cuotasPagadas + $i,
+                'monto' => $montoCuota,
+                'capital' => $capitalCuota,
+                'interes' => $interesCuota,
                 'excedente_anterior' => 0,
+                'otros' => $otrosCuota, // 2. Añadir el valor calculado.
                 'fecha_vencimiento' => $fechaVencimiento->format('Y-m-d'),
-                'estado' => 1,                   // 1: pendiente
+                'estado' => 1, // 1: pendiente
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ];
         }
 
-        // 4. Insertar todas las cuotas
         if (!empty($cuotas)) {
-            $prestamo->cuota()->createMany($cuotas); 
+            $prestamo->cuota()->insert($cuotas);
         }
     }
 }

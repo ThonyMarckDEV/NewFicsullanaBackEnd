@@ -65,6 +65,9 @@ Route::middleware(['auth.jwt', 'checkRoleMW:cajero'])->group(function () {
     Route::post('/pago/store', [PagoController::class, 'store']);
     Route::post('/pago/cancelar-total', [PagoController::class, 'cancelarTotal']);
 
+    //RUTAS PRESTAMO
+    Route::post('/prestamo/reprogramar', [PrestamoController::class, 'reprogramar']);
+
 });
 
 

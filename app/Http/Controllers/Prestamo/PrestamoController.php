@@ -8,7 +8,9 @@ use App\Http\Controllers\Prestamo\utilities\CrearCronograma;
 use App\Http\Controllers\Prestamo\utilities\CrearCuotasPrestamo;
 use App\Http\Controllers\Prestamo\utilities\EliminarCronograma;
 use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
+use App\Http\Controllers\Prestamo\utilities\ProcesarReprogramacion;
 use App\Http\Controllers\Prestamo\utilities\VerificarCuotasPagadas;
+use App\Http\Requests\ReprogramarPrestamoRequest;
 use App\Http\Requests\StorePrestamoRequest;
 use App\Http\Requests\UpdatePrestamoRequest;
 use App\Models\Prestamo;
@@ -108,13 +110,6 @@ class PrestamoController extends Controller
         return response()->json($prestamo);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Prestamo $prestamo)
-    {
-        //
-    }
 
       /**
      * Update the specified resource in storage.
@@ -203,6 +198,31 @@ class PrestamoController extends Controller
             return response()->json([
                 'type' => 'error',
                 'message' => 'Ocurrió un error inesperado al intentar eliminar el préstamo.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Reprograma un préstamo existente, liquidando el anterior y creando uno nuevo.
+     */
+    public function reprogramar(ReprogramarPrestamoRequest $request, ProcesarReprogramacion $procesador)
+    {
+        try {
+            $validatedData = $request->validated();
+            $prestamoOriginal = Prestamo::findOrFail($validatedData['prestamo_id']);
+
+            // Delegar toda la lógica al servicio
+            $nuevoPrestamo = $procesador->execute($prestamoOriginal, $validatedData);
+
+            return response()->json([
+                'message' => 'Préstamo reprogramado con éxito. Se ha generado un nuevo préstamo con el ID: ' . $nuevoPrestamo->id,
+                'data' => $nuevoPrestamo,
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al reprogramar el préstamo.',
                 'details' => $e->getMessage(),
             ], 500);
         }
