@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Prestamo;
 
 use App\Http\Controllers\Prestamo\utilities\AdjuntarComprobanteUrl;
+use App\Http\Controllers\Prestamo\utilities\AdjuntarCronogramaUrl;
 use App\Http\Controllers\Prestamo\utilities\CrearCronograma;
 use App\Http\Controllers\Prestamo\utilities\CrearCuotasPrestamo;
 use App\Http\Controllers\Prestamo\utilities\EliminarCronograma;
 use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
+use App\Http\Controllers\Prestamo\utilities\VerificarCuotasPagadas;
 use App\Http\Requests\StorePrestamoRequest;
 use App\Http\Requests\UpdatePrestamoRequest;
 use App\Models\Prestamo;
@@ -18,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 
 class PrestamoController extends Controller
 {
-    public function index(Request $request)
+   public function index(Request $request, VerificarCuotasPagadas $verificador, AdjuntarCronogramaUrl $adjuntadorUrl)
     {
         $validated = $request->validate([
             'search' => 'nullable|string|max:50',
@@ -35,30 +37,17 @@ class PrestamoController extends Controller
                 $query->where('id', 'like', "%{$search}%")
                     ->orWhereHas('cliente.datos', function ($q) use ($search) {
                         $q->where('dni', 'like', "%{$search}%")
-                        ->orWhere('nombre', 'like', "%{$search}%")
-                        ->orWhere('apellidoPaterno', 'like', "%{$search}%");
+                          ->orWhere('nombre', 'like', "%{$search}%")
+                          ->orWhere('apellidoPaterno', 'like', "%{$search}%");
                     });
             })
             ->orderBy($sortBy, $sortOrder)
             ->paginate(10);
         
-        // 2. Iterar sobre los resultados para añadir la URL del cronograma
-        $prestamos->getCollection()->transform(function ($prestamo) {
-            $directorio = "clientes/{$prestamo->id_Cliente}/prestamos/{$prestamo->id}/cronograma";
-            
-            // Buscar todos los archivos en el directorio
-            $archivos = Storage::disk('public')->files($directorio);
-            
-            if (!empty($archivos)) {
-                // Ordenar para encontrar el más reciente (si hay varios)
-                rsort($archivos);
-                // Asignar la URL pública del archivo más reciente
-                $prestamo->cronograma_url = Storage::url($archivos[0]);
-            } else {
-                // Si no hay archivos, asignar null
-                $prestamo->cronograma_url = null;
-            }
-            
+        // 2. Usar los servicios para transformar la colección
+        $prestamos->getCollection()->transform(function ($prestamo) use ($verificador, $adjuntadorUrl) {
+            $verificador->execute($prestamo);
+            $adjuntadorUrl->execute($prestamo);
             return $prestamo;
         });
 
