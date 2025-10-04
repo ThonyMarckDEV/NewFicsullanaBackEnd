@@ -56,4 +56,9 @@ class Prestamo extends Model
     {
         return $this->belongsTo(Producto::class, 'id_Producto' , 'id');
     }
+     public function cuotas()
+    {
+        return $this->hasMany(Cuota::class, 'id_Prestamo' , 'id');
+    }
+
 }
