@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers\Pago;
 
+use App\Http\Controllers\Pago\utilities\ProcesarDatosPago;
+use App\Http\Requests\StorePagoRequest;
+use App\Models\Cuota;
 use App\Models\Pago;
-use App\Http\Controllers\Controller
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PagoController extends Controller
 {
@@ -24,43 +29,30 @@ class PagoController extends Controller
         //
     }
 
-    public function store(StorePagoRequest $request)
+     /**
+     * Almacena un nuevo pago utilizando el servicio ProcesarDatosPago.
+     *
+     * @param StorePagoRequest $request
+     * @param ProcesarDatosPago $procesador
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(StorePagoRequest $request, ProcesarDatosPago $procesador)
     {
-        $validatedData = $request->validated();
-        $cuota = Cuota::findOrFail($validatedData['id_Cuota']);
-
-        if ($cuota->estado == 2) {
-            return response()->json(['message' => 'Esta cuota ya ha sido pagada.'], 409);
-        }
-
         try {
-            DB::transaction(function () use ($validatedData, $cuota) {
-                // 1. Crear el registro del pago
-                Pago::create([
-                    'id_Cuota' => $cuota->id,
-                    'monto_pagado' => $validatedData['monto_pagado'],
-                    'fecha_pago' => $validatedData['fecha_pago'],
-                    'modalidad' => $validatedData['modalidad'],
-                    'numero_operacion' => $validatedData['numero_operacion'] ?? null,
-                    'observaciones' => $validatedData['observaciones'] ?? null,
-                    'id_Usuario' => Auth::id(), // ID del cajero autenticado
-                ]);
+            $validatedData = $request->validated();
+            $cuota = Cuota::findOrFail($validatedData['id_Cuota']);
 
-                // 2. Actualizar el estado de la cuota
-                $cuota->estado = 2; // 2 = Pagado
-                $cuota->save();
+            if ($cuota->estado == 2) {
+                return response()->json(['message' => 'Esta cuota ya ha sido pagada.'], 409); // 409 Conflict
+            }
 
-                // 3. Verificar si el préstamo está completo
-                $prestamo = $cuota->prestamo;
-                if ($prestamo->cuota()->where('estado', '!=', 2)->count() === 0) {
-                    $prestamo->estado = 2; // 2 = Pagado
-                    $prestamo->save();
-                }
-            });
+            // 2. Delegar toda la lógica de negocio al servicio
+            $procesador->execute($validatedData, $cuota);
 
             return response()->json(['message' => 'Pago registrado con éxito.'], 201);
 
         } catch (\Exception $e) {
+            // Log::error('Error al registrar pago: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Error al registrar el pago.',
                 'details' => $e->getMessage(),
