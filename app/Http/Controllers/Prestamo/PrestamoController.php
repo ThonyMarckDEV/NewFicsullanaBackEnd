@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Prestamo;
 
+use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
+use App\Http\Requests\StorePrestamoRequest;
 use App\Models\Prestamo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -25,12 +27,32 @@ class PrestamoController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+         * Almacena un nuevo préstamo.
+         *
+         * @param  \App\Http\Requests\StorePrestamoRequest  $request
+         * @return \Illuminate\Http\JsonResponse
+         */
+        public function store(StorePrestamoRequest $request , ProcesarDatosPrestamo $procesador)
+        {
+            try {
+                $validatedData = $request->validated();
+
+                $prestamo = $procesador->crearNuevoPrestamo($validatedData);
+
+                return response()->json([
+                    'type' => 'success',
+                    'message' => 'Préstamo creado con éxito.',
+                    'data' => $prestamo,
+                ], 201); // 201 Created
+            } catch (\Exception $e) {
+                // Log::error('Error al crear préstamo: ' . $e->getMessage());
+                return response()->json([
+                    'type' => 'error',
+                    'message' => 'Error al guardar el préstamo.',
+                    'details' => $e->getMessage()
+                ], 500);
+            }
+        }
 
     /**
      * Display the specified resource.

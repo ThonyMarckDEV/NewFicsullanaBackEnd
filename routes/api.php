@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ResetPassword\PasswordResetController;
 use App\Http\Controllers\Cliente\ClienteController;
 use App\Http\Controllers\Empleado\EmpleadoController;
+use App\Http\Controllers\Prestamo\PrestamoController;
 use App\Http\Controllers\Producto\ProductoController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,7 +40,7 @@ Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () {
     Route::patch('/empleado/toggleEstado/{empleado}', [EmpleadoController::class, 'toggleEstado']);
 
     //RUTAS CRUD PRESTAMO
-    
+    Route::post('/prestamo/store', [PrestamoController::class, 'store']);
 });
 
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)
