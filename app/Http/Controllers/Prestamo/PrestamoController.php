@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Prestamo;
 
+use App\Http\Controllers\Prestamo\utilities\EliminarCronograma;
 use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
 use App\Http\Requests\StorePrestamoRequest;
 use App\Models\Prestamo;
@@ -102,31 +103,35 @@ class PrestamoController extends Controller
         //
     }
 
-   /**
-     * Elimina un préstamo si fue creado el mismo día.
+       /**
+     * Elimina un préstamo y sus archivos asociados si fue creado el mismo día.
      *
      * @param \App\Models\Prestamo $prestamo
+     * @param \App\Http\Controllers\Prestamo\utilities\EliminarCronograma $eliminador
      * @return \Illuminate\Http\JsonResponse
      */
-    public function destroy(Prestamo $prestamo)
+    public function destroy(Prestamo $prestamo, EliminarCronograma $eliminador)
     {
         try {
-            // 1. Verificar la condición: Solo se puede eliminar si la fecha de generación es hoy.
+            // 1. Verificar la condición de la fecha.
             if (!Carbon::parse($prestamo->fecha_generacion)->isToday()) {
                 return response()->json([
                     'type' => 'error',
                     'message' => 'Acción no permitida.',
                     'details' => 'Este préstamo no puede ser eliminado porque no fue creado hoy.'
-                ], 403); // 403 Forbidden
+                ], 403);
             }
 
-            // 2. Eliminar el préstamo de la base de datos.
+            // 2. Llamar al servicio para eliminar la carpeta de cronogramas.
+            $eliminador->execute($prestamo->id_Cliente, $prestamo->id);
+
+            // 3. Eliminar el préstamo de la base de datos.
             $prestamo->delete();
 
-            // 3. Devolver una respuesta de éxito.
+            // 4. Devolver una respuesta de éxito.
             return response()->json([
                 'type' => 'success',
-                'message' => 'El préstamo ha sido eliminado con éxito.',
+                'message' => 'El préstamo y sus archivos asociados han sido eliminados con éxito.',
             ]);
 
         } catch (\Exception $e) {
