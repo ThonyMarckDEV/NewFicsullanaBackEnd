@@ -24,12 +24,18 @@ class CrearCronograma
 
         // 3. Definir el nombre y la ruta del archivo
         $prestamoId = $prestamo->id;
-        $timestamp = now()->format('Ymd-His'); // Formato: AñoMesDía-HoraMinutoSegundo
+        
+        // ===== INICIO DE LA CORRECCIÓN =====
+        $idCliente = $prestamo->id_Cliente; // Obtenemos el ID del cliente desde el préstamo
+        // ===== FIN DE LA CORRECCIÓN =====
+
+        $timestamp = now()->format('Ymd-His');
         $fileName = "cronograma-{$timestamp}.pdf";
-        $filePath = "clientes/prestamos/{$prestamoId}/cronograma/{$fileName}";
+        
+        // Usamos la variable $idCliente que acabamos de definir
+        $filePath = "clientes/{$idCliente}/prestamos/{$prestamoId}/cronograma/{$fileName}";
 
         // 4. Guardar el PDF en el disco 'public'
-        // Esto lo guardará en la carpeta `storage/app/public/clientes/...`
         Storage::disk('public')->put($filePath, $pdf->output());
 
         // 5. Devolver la ruta del archivo guardado
