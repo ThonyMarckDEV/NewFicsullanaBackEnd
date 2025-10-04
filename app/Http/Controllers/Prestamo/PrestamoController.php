@@ -120,16 +120,20 @@ class PrestamoController extends Controller
         //
     }
 
-     /**
+      /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePrestamoRequest $request, Prestamo $prestamo, CrearCuotasPrestamo $creadorCuotas, CrearCronograma $creadorCronograma)
-    {
+    public function update(
+        UpdatePrestamoRequest $request, 
+        Prestamo $prestamo, 
+        CrearCuotasPrestamo $creadorCuotas, 
+        CrearCronograma $creadorCronograma,
+        EliminarCronograma $eliminadorCronograma // 2. Inyectar el servicio de eliminación
+    ) {
         try {
-            // La autorización (verificar la fecha) ya se hizo en UpdatePrestamoRequest
             $validatedData = $request->validated();
             
-            DB::transaction(function () use ($prestamo, $validatedData, $creadorCuotas, $creadorCronograma) {
+            DB::transaction(function () use ($prestamo, $validatedData, $creadorCuotas, $creadorCronograma, $eliminadorCronograma) {
                 // 1. Actualizar el préstamo con los nuevos datos
                 $prestamo->update($validatedData);
 
@@ -139,14 +143,17 @@ class PrestamoController extends Controller
                 // 3. Generar las nuevas cuotas con los datos actualizados
                 $creadorCuotas->generarCuotas($prestamo);
                 
-                // 4. Generar un nuevo cronograma en PDF
+                // 4. Eliminar el directorio de cronogramas antiguos
+                $eliminadorCronograma->execute($prestamo->id_Cliente, $prestamo->id);
+
+                // 5. Generar un nuevo cronograma en PDF (que creará el directorio de nuevo)
                 $creadorCronograma->generar($prestamo);
             });
             
             return response()->json([
                 'type' => 'success',
                 'message' => 'Préstamo actualizado con éxito.',
-                'data' => $prestamo->fresh()->load('cuota'), // Devolvemos el préstamo actualizado
+                'data' => $prestamo->fresh()->load('cuota'),
             ]);
 
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
