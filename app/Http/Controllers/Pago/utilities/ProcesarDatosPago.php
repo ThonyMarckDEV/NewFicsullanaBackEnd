@@ -46,6 +46,7 @@ class ProcesarDatosPago
             $pago = Pago::create([
                 'id_Cuota' => $cuota->id,
                 'monto_pagado' => $montoPagadoHoy,
+                'excedente' =>  $nuevoExcedente,
                 'fecha_pago' => $validatedData['fecha_pago'],
                 'modalidad' => $validatedData['modalidad'],
                 'observaciones' => $validatedData['observaciones'] ?? null,
