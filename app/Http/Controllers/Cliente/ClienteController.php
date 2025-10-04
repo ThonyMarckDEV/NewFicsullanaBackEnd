@@ -88,24 +88,16 @@ class ClienteController extends Controller
         //
     }
 
-    /**
+     /**
      * Muestra toda la información de un cliente específico, sea buscado por ID o DNI.
      */
-    public function show(User $cliente): JsonResponse
+    public function show(User $cliente , ProcesarDatosCliente $procesador): JsonResponse
     {
         try {
-            // 1. Cargamos TODAS las relaciones necesarias.
-            $cliente->load([
-                'rol',
-                'datos.direcciones',
-                'datos.contactos',
-                'datos.empleos',
-                'datos.cuentasBancarias',
-                'avales'
-            ]);
-
-            // A. VALIDACIÓN DE ROL (Se mantiene)
-            // Filtrar solo usuarios con rol id 2 (cliente).
+            // A. VALIDACIÓN DE ROL (DEBE hacerse ANTES de cargar toda la data)
+            // Solo cargamos la relación 'rol' para esta validación rápida.
+            $cliente->load('rol');
+            
             if (!$cliente->rol || $cliente->rol->id !== 2) {
                 return response()->json([
                     'type'    => 'error',
@@ -113,34 +105,18 @@ class ClienteController extends Controller
                 ], 403);
             }
 
-            // 2. Construimos la estructura plana con TODOS los datos,
-            // ya que la distinción DNI vs ID fue eliminada.
-            $clienteProcesado = [
-                'id' => $cliente->id,
-                'username' => $cliente->username,
-                'estado' => $cliente->estado,
-                
-                // Usamos getAttributes() para 'datos' y evitamos que las relaciones
-                // (direcciones, contactos, etc.) aparezcan anidadas dentro de 'datos'.
-                'datos' => optional($cliente->datos)->getAttributes(),
-                
-                // Agregamos las relaciones en el nivel superior.
-                'direcciones' => optional($cliente->datos)->direcciones,
-                'contactos' => optional($cliente->datos)->contactos,
-                'empleos' => optional($cliente->datos)->empleos,
-                'cuentas_bancarias' => optional($cliente->datos)->cuentasBancarias,
-                'avales' => $cliente->avales,
-            ];
+            // 1. Delegar la carga y formateo de datos a la clase de utilidad.
+            $clienteProcesado = $procesador->obtenerInformacionCliente($cliente);
 
-            // 3. Respuesta final exitosa.
+            // 2. Respuesta final exitosa.
             return response()->json([
                 'type'    => 'success',
                 'message' => 'Cliente encontrado.',
-                'data'    => $clienteProcesado // <-- Siempre devuelve el objeto completo
+                'data'    => $clienteProcesado
             ]);
 
         } catch (Exception $e) {
-            // Manejo de error si el modelo User no fue encontrado por el Route Model Binding.
+            // Manejo de error si el modelo User no fue encontrado o hay un error interno.
             return response()->json([
                 'type'    => 'error',
                 'message' => 'Cliente no encontrado.'
@@ -148,48 +124,7 @@ class ClienteController extends Controller
         }
     }
 
-    //  /**
-    //  * Muestra toda la información de un cliente específico.
-    //  */
-    // public function show(User $cliente): JsonResponse
-    // {
-    //     try {
-    //         // 1. Cargamos las relaciones como antes.
-    //         $cliente->load([
-    //             'datos.direcciones',
-    //             'datos.contactos',
-    //             'datos.empleos',
-    //             'datos.cuentasBancarias',
-    //             'avales'
-    //         ]);
-
-    //         // 2. Construimos la estructura plana que necesita el frontend.
-    //         $clienteProcesado = [
-    //             'id' => $cliente->id,
-    //             'username' => $cliente->username,
-    //             'estado' => $cliente->estado,
-    //             'datos' => $cliente->datos->getAttributes(),
-    //             'direcciones' => $cliente->datos->direcciones,
-    //             'contactos' => $cliente->datos->contactos,
-    //             'empleos' => $cliente->datos->empleos,
-    //             'cuentas_bancarias' => $cliente->datos->cuentasBancarias,
-    //             'avales' => $cliente->avales,
-    //         ];
-
-    //         // ===============================================================
-    //         // === CAMBIO CLAVE AQUÍ ===
-    //         // Envolvemos la respuesta en un objeto con la propiedad 'data'.
-    //         // ===============================================================
-    //         return response()->json([
-    //             'type'    => 'success',
-    //             'message' => 'Cliente encontrado.',
-    //             'data'    => $clienteProcesado // <-- AQUÍ ESTÁ LA MAGIA
-    //         ]);
-
-    //     } catch (Exception $e) {
-    //         return response()->json(['message' => 'Cliente no encontrado.'], 404);
-    //     }
-    // }
+   
     
     /**
      * Actualiza un cliente existente en la base de datos.

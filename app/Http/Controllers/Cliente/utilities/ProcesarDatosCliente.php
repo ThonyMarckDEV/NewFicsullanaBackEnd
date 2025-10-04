@@ -76,6 +76,44 @@ class ProcesarDatosCliente
         });
     }
 
+     /**
+     * Carga las relaciones y formatea la información completa de un cliente.
+     * * @param User $cliente El modelo User que se quiere procesar.
+     * @return array La información del cliente formateada.
+     */
+    public function obtenerInformacionCliente(User $cliente): array
+    {
+        // 1. Cargamos TODAS las relaciones necesarias.
+        $cliente->load([
+            'rol',
+            'datos.direcciones',
+            'datos.contactos',
+            'datos.empleos',
+            'datos.cuentasBancarias',
+            'avales'
+        ]);
+
+        // 2. Construimos la estructura plana con TODOS los datos.
+        $clienteProcesado = [
+            'id' => $cliente->id,
+            'username' => $cliente->username,
+            'estado' => $cliente->estado,
+            
+            // Usamos getAttributes() para 'datos' para obtener solo los campos
+            // de la tabla principal y evitar que las relaciones anidadas se dupliquen.
+            'datos' => optional($cliente->datos)->getAttributes(),
+            
+            // Agregamos las relaciones en el nivel superior.
+            'direcciones' => optional($cliente->datos)->direcciones,
+            'contactos' => optional($cliente->datos)->contactos,
+            'empleos' => optional($cliente->datos)->empleos,
+            'cuentas_bancarias' => optional($cliente->datos)->cuentasBancarias,
+            'avales' => $cliente->avales,
+        ];
+        
+        return $clienteProcesado;
+    }
+
 
     
 }
