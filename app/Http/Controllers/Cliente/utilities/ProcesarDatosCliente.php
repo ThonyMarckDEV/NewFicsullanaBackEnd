@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Cliente\utilities;
 
+use App\Http\Controllers\Cliente\utilities\services\ObtenerModalidadCliente;
 use App\Models\Datos;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,18 @@ use Exception;
 
 class ProcesarDatosCliente
 {
+
+    protected $modalidadClienteService;
+
+    /**
+     * Inyecta el servicio de modalidad al construir el procesador.
+     */
+    public function __construct(ObtenerModalidadCliente $modalidadClienteService)
+    {
+        // 1. Inyección de Dependencia para el servicio
+        $this->modalidadClienteService = $modalidadClienteService;
+    }
+
     public function crearNuevoCliente(array $data)
     {
         // Usamos una transacción para asegurar la integridad de los datos
@@ -76,16 +89,19 @@ class ProcesarDatosCliente
         });
     }
 
-     /**
+    /**
      * Carga las relaciones y formatea la información completa de un cliente.
-     * * @param User $cliente El modelo User que se quiere procesar.
+     * @param User $cliente El modelo User que se quiere procesar.
      * @return array La información del cliente formateada.
      */
     public function obtenerInformacionCliente(User $cliente): array
     {
-        // 1. Cargamos TODAS las relaciones necesarias.
+        // NO necesitas el segundo argumento aquí, ya que se inyectó en el constructor.
+        
+        // 1. Cargamos TODAS las relaciones necesarias, incluyendo 'prestamos' para el servicio.
         $cliente->load([
             'rol',
+            'prestamos',
             'datos.direcciones',
             'datos.contactos',
             'datos.empleos',
@@ -93,16 +109,21 @@ class ProcesarDatosCliente
             'avales'
         ]);
 
-        // 2. Construimos la estructura plana con TODOS los datos.
+        // 2. Usamos el servicio externo (inyectado) para calcular la modalidad del cliente.
+        $modalidadClienteCalculada = $this->modalidadClienteService->obtenerModalidad($cliente); // <-- USAMOS $this->
+
+        // 3. Construimos la estructura plana con TODOS los datos.
         $clienteProcesado = [
             'id' => $cliente->id,
             'username' => $cliente->username,
-            'estado' => $cliente->estado,
+            'estado' => $cliente->estado, // Estado del campo del usuario
             
-            // Usamos getAttributes() para 'datos' para obtener solo los campos
-            // de la tabla principal y evitar que las relaciones anidadas se dupliquen.
+            // Usamos getAttributes() para 'datos' para obtener solo los campos de la tabla principal.
             'datos' => optional($cliente->datos)->getAttributes(),
             
+            // **AÑADIMOS EL CAMPO DE MODALIDAD DEL CLIENTE CALCULADA AQUÍ**
+            'modalidad_cliente' => $modalidadClienteCalculada, 
+
             // Agregamos las relaciones en el nivel superior.
             'direcciones' => optional($cliente->datos)->direcciones,
             'contactos' => optional($cliente->datos)->contactos,
@@ -113,7 +134,6 @@ class ProcesarDatosCliente
         
         return $clienteProcesado;
     }
-
 
     
 }

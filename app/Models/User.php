@@ -134,5 +134,13 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(ClienteAval::class, 'id_Cliente', 'id');
     }
 
+    /**
+     * Relación con prestamos
+     */
+    public function prestamos()
+    {
+        return $this->hasMany(Prestamo::class, 'id_Cliente', 'id');
+    }
+
 
 }
