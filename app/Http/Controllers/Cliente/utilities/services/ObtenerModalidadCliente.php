@@ -3,34 +3,48 @@
 namespace App\Http\Controllers\Cliente\utilities\services;
 
 use App\Models\User;
+use App\Models\Prestamo; 
 
 class ObtenerModalidadCliente
 {
     /**
-     * Determina la modalidad del cliente (NUEVO o RSS) basándose en sus préstamos.
-     * @param User $cliente El modelo User con la relación 'prestamos' cargada.
-     * @return string La modalidad del cliente (NUEVO, RSS, o VIGENTE).
+     * Determina la modalidad del cliente (NUEVO, RSS, RCS, o PRESTAMO_ACTIVO) basándose en sus préstamos.
+     * @param User $cliente El modelo User. Se asume que la relación 'prestamos' está cargada.
+     * @return string La modalidad del cliente.
      */
     public function obtenerModalidad(User $cliente): string
     {
-        // 1. Si no tiene préstamos, la modalidad es NUEVO.
         if ($cliente->prestamos->isEmpty()) {
             return 'NUEVO';
         }
 
-        // 2. Buscamos si existe al menos un préstamo en estado 'Cancelado' (valor 2).
+        // Buscamos el préstamo activo (estado 1: vigente)
+        $prestamoActivo = $cliente->prestamos->firstWhere('estado', 1);
+
+        // Verificación de Historial (RSS)
         $tienePrestamosCancelados = $cliente->prestamos->contains(function ($prestamo) {
-            // CORRECCIÓN CLAVE: Se usa el operador de comparación estricta (===) 
-            // para verificar el valor numérico 2, que es 'Cancelado'.
-            return $prestamo->estado === 2; 
+            return $prestamo->estado === 2; // Estado 2 = Cancelado
         });
 
-        // 3. Si tiene préstamos y al menos uno está cancelado, la modalidad es RSS.
-        if ($tienePrestamosCancelados) {
-            return 'RSS'; // Coincide con tu lógica "RSS osea 2"
+        if (!$prestamoActivo) {
+            // Si NO hay préstamo activo, verificamos historial
+            return $tienePrestamosCancelados ? 'RSS' : 'NUEVO';
         }
 
-        // 4. Si tiene historial de préstamos, pero no hay ninguno cancelado, se considera VIGENTE.
-        return 'RCS';
+        // -----------------------------------------------------------------
+        // CORRECCIÓN: Usamos cuota() para llamar a la relación y usar el Query Builder.
+        
+        // Contar cuotas pendientes (1: pendiente, 3: vence_hoy, 4: vencido)
+        $cuotasPendientes = $prestamoActivo->cuota() 
+            ->whereIn('estado', [1, 3, 4])
+            ->count(); 
+
+        // Si solo queda 1 cuota pendiente, es RCS.
+        if ($cuotasPendientes === 1) {
+            return 'RCS';
+        }
+        
+        // Si tiene más de una cuota pendiente, es un préstamo activo normal.
+        return 'PRESTAMO_ACTIVO';
     }
 }
