@@ -108,7 +108,7 @@ class PrestamoController extends Controller
      * @param \App\Models\Prestamo $prestamo
      * @return \Illuminate\Http\JsonResponse
      */
-    public function extornar(Prestamo $prestamo)
+    public function destroy(Prestamo $prestamo)
     {
         try {
             // 1. Verificar la condición: Solo se puede eliminar si la fecha de generación es hoy.

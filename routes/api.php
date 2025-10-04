@@ -43,7 +43,7 @@ Route::middleware(['auth.jwt', 'checkRoleMW:admin'])->group(function () {
     Route::get('/prestamos/index', [PrestamoController::class, 'index']);
     Route::post('/prestamo/store', [PrestamoController::class, 'store']);
     Route::get('/prestamo/show/{prestamo}', [PrestamoController::class, 'show']);
-    Route::post('/prestamo/extornar/{prestamo}', [PrestamoController::class, 'extornar']);
+    Route::post('/prestamo/extornar/{prestamo}', [PrestamoController::class, 'destroy']);
 });
 
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)
