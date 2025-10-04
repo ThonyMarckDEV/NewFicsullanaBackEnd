@@ -27,6 +27,7 @@ class Cuota extends Model
         'capital',
         'interes',
         'otros',
+        'excedente_anterior',
         'fecha_vencimiento',
         'estado',
         'dias_mora',

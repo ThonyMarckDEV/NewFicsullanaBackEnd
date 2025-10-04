@@ -83,6 +83,7 @@ class CrearCuotasPrestamo
                 'capital' => $capitalFijo,       // Fijo: Capital Total / Cuotas
                 'interes' => $interesFijo,       // Fijo: Interés Total / Cuotas
                 'otros' => $otrosFijos,          // Fijo: Residuo para cuadrar la cuota
+                'excedente_anterior' => 0,
                 'fecha_vencimiento' => $fechaVencimiento->format('Y-m-d'),
                 'estado' => 1,                   // 1: pendiente
                 'created_at' => Carbon::now(),
