@@ -43,6 +43,7 @@ return new class extends Migration
             $table->decimal('capital', 10, 2);
             $table->decimal('interes', 10, 2);
             $table->decimal('otros', 10, 2);
+            $table->decimal('excedente_anterior', 10, 2);
             $table->date('fecha_vencimiento');
             $table->tinyInteger('estado')->comment(' 1: pendiente , 2: pagado , 3: vence_hoy , 4: vencido , 5: prepagado');
             $table->integer('dias_mora')->default(0);

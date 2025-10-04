@@ -56,9 +56,16 @@ class Prestamo extends Model
     {
         return $this->belongsTo(Producto::class, 'id_Producto' , 'id');
     }
-     public function cuota()
+     
+    public function cuota()
     {
         return $this->hasMany(Cuota::class, 'id_Prestamo' , 'id');
+    }
+
+    public function pagos()
+    {
+        // Un préstamo tiene muchos pagos A TRAVÉS de sus cuotas.
+        return $this->hasManyThrough(Pago::class, Cuota::class, 'id_Prestamo', 'id_Cuota');
     }
 
 }
