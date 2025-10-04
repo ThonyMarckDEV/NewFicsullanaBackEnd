@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Prestamo;
 
+use App\Http\Controllers\Prestamo\utilities\CrearCronograma;
+use App\Http\Controllers\Prestamo\utilities\CrearCuotasPrestamo;
 use App\Http\Controllers\Prestamo\utilities\EliminarCronograma;
 use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
 use App\Http\Requests\StorePrestamoRequest;
+use App\Http\Requests\UpdatePrestamoRequest;
 use App\Models\Prestamo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -70,32 +73,32 @@ class PrestamoController extends Controller
     }
 
     /**
-         * Almacena un nuevo préstamo.
-         *
-         * @param  \App\Http\Requests\StorePrestamoRequest  $request
-         * @return \Illuminate\Http\JsonResponse
-         */
-        public function store(StorePrestamoRequest $request , ProcesarDatosPrestamo $procesador)
-        {
-            try {
-                $validatedData = $request->validated();
+     * Almacena un nuevo préstamo.
+     *
+     * @param  \App\Http\Requests\StorePrestamoRequest  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(StorePrestamoRequest $request , ProcesarDatosPrestamo $procesador)
+    {
+        try {
+            $validatedData = $request->validated();
 
-                $prestamo = $procesador->crearNuevoPrestamo($validatedData);
+            $prestamo = $procesador->crearNuevoPrestamo($validatedData);
 
-                return response()->json([
-                    'type' => 'success',
-                    'message' => 'Préstamo creado con éxito.',
-                    'data' => $prestamo,
-                ], 201); // 201 Created
-            } catch (\Exception $e) {
-                // Log::error('Error al crear préstamo: ' . $e->getMessage());
-                return response()->json([
-                    'type' => 'error',
-                    'message' => 'Error al guardar el préstamo.',
-                    'details' => $e->getMessage()
-                ], 500);
-            }
+            return response()->json([
+                'type' => 'success',
+                'message' => 'Préstamo creado con éxito.',
+                'data' => $prestamo,
+            ], 201); // 201 Created
+        } catch (\Exception $e) {
+            // Log::error('Error al crear préstamo: ' . $e->getMessage());
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Error al guardar el préstamo.',
+                'details' => $e->getMessage()
+            ], 500);
         }
+    }
 
     /**
      * Muestra los detalles completos de un préstamo específico.
@@ -117,12 +120,48 @@ class PrestamoController extends Controller
         //
     }
 
-    /**
+     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Prestamo $prestamo)
+    public function update(UpdatePrestamoRequest $request, Prestamo $prestamo, CrearCuotasPrestamo $creadorCuotas, CrearCronograma $creadorCronograma)
     {
-        //
+        try {
+            // La autorización (verificar la fecha) ya se hizo en UpdatePrestamoRequest
+            $validatedData = $request->validated();
+            
+            DB::transaction(function () use ($prestamo, $validatedData, $creadorCuotas, $creadorCronograma) {
+                // 1. Actualizar el préstamo con los nuevos datos
+                $prestamo->update($validatedData);
+
+                // 2. Eliminar las cuotas anteriores
+                $prestamo->cuota()->delete();
+
+                // 3. Generar las nuevas cuotas con los datos actualizados
+                $creadorCuotas->generarCuotas($prestamo);
+                
+                // 4. Generar un nuevo cronograma en PDF
+                $creadorCronograma->generar($prestamo);
+            });
+            
+            return response()->json([
+                'type' => 'success',
+                'message' => 'Préstamo actualizado con éxito.',
+                'data' => $prestamo->fresh()->load('cuota'), // Devolvemos el préstamo actualizado
+            ]);
+
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Acción no permitida.',
+                'details' => 'Este préstamo no puede ser editado porque no fue creado hoy.'
+            ], 403);
+        } catch (\Exception $e) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Error al actualizar el préstamo.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
     }
 
        /**
