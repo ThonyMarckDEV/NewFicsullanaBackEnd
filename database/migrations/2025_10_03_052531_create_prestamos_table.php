@@ -64,7 +64,7 @@ return new class extends Migration
             $table->string('numero_operacion')->nullable();
             $table->unsignedBigInteger('id_Cuota');
             $table->decimal('monto_pagado', 10, 2);
-            $table->decimal('excedente', 10, 2)->default(0);
+            $table->decimal('excedente', 10, 2);
             $table->date('fecha_pago');
             $table->text('observaciones')->nullable();
             $table->unsignedBigInteger('id_Usuario');
