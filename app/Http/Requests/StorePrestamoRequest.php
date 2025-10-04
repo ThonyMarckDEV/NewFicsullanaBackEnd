@@ -61,14 +61,50 @@ class StorePrestamoRequest extends FormRequest
     }
 
     /**
-     * Define mensajes de error personalizados (opcional).
+     * Define mensajes de error personalizados.
      */
     public function messages(): array
     {
         return [
-            'id_Cliente.exists' => 'El cliente seleccionado no existe.',
-            'id_Cliente.required' => 'El ID del cliente es obligatorio.',
-            // El mensaje de préstamo vigente ya se añade en withValidator.
+            // === Mensajes para IDs ===
+            'id_Cliente.required' => 'Debe seleccionar un cliente.',
+            'id_Cliente.integer' => 'El cliente seleccionado no es válido.',
+            'id_Cliente.exists' => 'El cliente seleccionado no existe en la base de datos.',
+
+            'id_Asesor.required' => 'Debe seleccionar un asesor.',
+            'id_Asesor.integer' => 'El asesor seleccionado no es válido.',
+            'id_Asesor.exists' => 'El asesor seleccionado no existe en la base de datos.',
+
+            'id_Producto.required' => 'Debe seleccionar un producto.',
+            'id_Producto.integer' => 'El producto seleccionado no es válido.',
+            'id_Producto.exists' => 'El producto seleccionado no existe.',
+
+            // === Mensajes para Datos del Préstamo ===
+            'monto.required' => 'El monto del préstamo es obligatorio.',
+            'monto.numeric' => 'El monto debe ser un valor numérico.',
+            'monto.min' => 'El monto mínimo del préstamo es de S/ :min.',
+
+            'interes.required' => 'La tasa de interés es obligatoria.',
+            'interes.numeric' => 'La tasa de interés debe ser un valor numérico.',
+            'interes.min' => 'La tasa de interés no puede ser negativa.',
+            'interes.max' => 'La tasa de interés debe ser un valor decimal entre 0 y 1 (ej: 0.2 para 20%).',
+
+            'cuotas.required' => 'El número de cuotas es obligatorio.',
+            'cuotas.integer' => 'El número de cuotas debe ser un número entero.',
+            'cuotas.min' => 'El préstamo debe tener al menos :min cuota.',
+
+            'total.required' => 'El campo total es requerido para el registro.',
+            'valor_cuota.required' => 'El valor de la cuota es requerido para el registro.',
+
+            // === Mensajes para Selects de Texto ===
+            'frecuencia.required' => 'Debe seleccionar una frecuencia de pago.',
+            'frecuencia.in' => 'La frecuencia de pago seleccionada no es válida.',
+
+            'modalidad.required' => 'Debe seleccionar una modalidad para el préstamo.',
+            'modalidad.in' => 'La modalidad seleccionada no es válida.',
+            
+            'abonado_por.required' => 'Debe especificar de dónde se abona el dinero.',
+            'abonado_por.in' => 'El origen del abono seleccionado no es válido.',
         ];
     }
 }
