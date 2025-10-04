@@ -110,7 +110,7 @@ class ProcesarDatosCliente
         ]);
 
         // 2. Usamos el servicio externo (inyectado) para calcular la modalidad del cliente.
-        $modalidadClienteCalculada = $this->modalidadClienteService->obtenerModalidad($cliente); // <-- USAMOS $this->
+        $modalidadClienteCalculada = $this->modalidadClienteService->obtenerModalidad($cliente);
 
         // 3. Construimos la estructura plana con TODOS los datos.
         $clienteProcesado = [
