@@ -51,5 +51,5 @@ class ProcesarDatosPrestamo
         });
     }
 
-    // El método privado 'liquidarPrestamoAnterior' ya no es necesario aquí y se ha eliminado.
+    
 }
