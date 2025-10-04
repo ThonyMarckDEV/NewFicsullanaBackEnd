@@ -20,10 +20,6 @@ class ObtenerModalidadCliente
         // Buscamos el préstamo activo (estado 1: vigente)
         $prestamoActivo = $cliente->prestamos->firstWhere('estado', 1);
 
-        // ==========================================================
-        // INICIO DE LA CORRECCIÓN
-        // ==========================================================
-
         // Verificación de Historial (RSS): Ahora buscamos préstamos en estado 2 (Pagado) o 3 (Liquidado).
         $tienePrestamosCompletados = $cliente->prestamos->contains(function ($prestamo) {
             return in_array($prestamo->estado, [2, 3]); // Se busca si el estado es 2 O 3
@@ -34,11 +30,7 @@ class ObtenerModalidadCliente
             // Si tiene préstamos completados, es candidato para RSS.
             return $tienePrestamosCompletados ? 'RSS' : 'NUEVO';
         }
-        
-        // ==========================================================
-        // FIN DE LA CORRECCIÓN
-        // ==========================================================
-
+    
         // Contar cuotas pendientes (estado diferente de 'Pagado')
         $cuotasPendientes = $prestamoActivo->cuota() 
             ->where('estado', '!=', 2)
