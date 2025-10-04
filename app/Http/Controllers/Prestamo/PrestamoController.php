@@ -7,6 +7,8 @@ use App\Http\Requests\StorePrestamoRequest;
 use App\Models\Prestamo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PrestamoController extends Controller
 {
@@ -100,11 +102,40 @@ class PrestamoController extends Controller
         //
     }
 
-    /**
-     * Remove the specified resource from storage.
+   /**
+     * Elimina un préstamo si fue creado el mismo día.
+     *
+     * @param \App\Models\Prestamo $prestamo
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function destroy(Prestamo $prestamo)
+    public function extornar(Prestamo $prestamo)
     {
-        //
+        try {
+            // 1. Verificar la condición: Solo se puede eliminar si la fecha de generación es hoy.
+            if (!Carbon::parse($prestamo->fecha_generacion)->isToday()) {
+                return response()->json([
+                    'type' => 'error',
+                    'message' => 'Acción no permitida.',
+                    'details' => 'Este préstamo no puede ser eliminado porque no fue creado hoy.'
+                ], 403); // 403 Forbidden
+            }
+
+            // 2. Eliminar el préstamo de la base de datos.
+            $prestamo->delete();
+
+            // 3. Devolver una respuesta de éxito.
+            return response()->json([
+                'type' => 'success',
+                'message' => 'El préstamo ha sido eliminado con éxito.',
+            ]);
+
+        } catch (\Exception $e) {
+            // Log::error('Error al eliminar el préstamo: ' . $e->getMessage());
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Ocurrió un error inesperado al intentar eliminar el préstamo.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
