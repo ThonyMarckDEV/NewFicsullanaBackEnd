@@ -119,7 +119,7 @@ class PrestamoController extends Controller
         Prestamo $prestamo, 
         CrearCuotasPrestamo $creadorCuotas, 
         CrearCronograma $creadorCronograma,
-        EliminarCronograma $eliminadorCronograma // 2. Inyectar el servicio de eliminación
+        EliminarCronograma $eliminadorCronograma
     ) {
         try {
             $validatedData = $request->validated();
