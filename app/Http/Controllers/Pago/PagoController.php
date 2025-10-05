@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Pago;
 
+use App\Http\Controllers\Pago\utilities\ProcesarAceptacionCaptura;
 use App\Http\Controllers\Pago\utilities\ProcesarCancelacionTotal;
 use App\Http\Controllers\Pago\utilities\ProcesarDatosPago;
+use App\Http\Controllers\Pago\utilities\ProcesarRechazoCaptura;
 use App\Http\Requests\StorePagoRequest;
 use App\Models\Cuota;
 use App\Models\Pago;
@@ -80,6 +82,58 @@ class PagoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al cancelar el préstamo.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+     /**
+     * Acepta la captura de pago virtual, finalizando la cuota y el pago.
+     */
+    public function aceptarCaptura(Request $request, ProcesarAceptacionCaptura $procesador)
+    {
+        $request->validate(['id_Cuota' => 'required|integer|exists:cuotas,id']);
+        
+        try {
+            $cuota = Cuota::findOrFail($request->id_Cuota);
+
+            if ($cuota->estado != 5) {
+                 return response()->json(['message' => 'La cuota no está en estado "Procesando".'], 409);
+            }
+            
+            $procesador->execute($cuota);
+            
+            return response()->json(['message' => 'Captura de pago aceptada. Cuota marcada como Pagada.'], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al aceptar la captura de pago.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Rechaza la captura de pago virtual, eliminando el archivo y revirtiendo la cuota.
+     */
+    public function rechazarCaptura(Request $request, ProcesarRechazoCaptura $procesador)
+    {
+        $request->validate(['id_Cuota' => 'required|integer|exists:cuotas,id']);
+        
+        try {
+            $cuota = Cuota::findOrFail($request->id_Cuota);
+
+            if ($cuota->estado != 5) {
+                 return response()->json(['message' => 'La cuota no está en estado "Procesando".'], 409);
+            }
+            
+            $procesador->execute($cuota);
+            
+            return response()->json(['message' => 'Captura de pago rechazada. Cuota revertida a Pendiente.'], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al rechazar la captura de pago.',
                 'details' => $e->getMessage(),
             ], 500);
         }

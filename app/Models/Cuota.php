@@ -60,4 +60,15 @@ class Cuota extends Model
     {
         return $this->belongsTo(Prestamo::class, 'id_Prestamo');
     }
+
+    
+    /**
+     * Define la relación inversa de UNO a MUCHOS con el modelo Prestamo.
+     * Una Cuota pertenece a un solo Préstamo.
+     */
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'id_Cuota');
+    }
+
 }

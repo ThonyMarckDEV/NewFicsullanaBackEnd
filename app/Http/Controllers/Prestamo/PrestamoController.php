@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Prestamo;
 
+use App\Http\Controllers\Prestamo\utilities\AdjuntarCapturaPagoUrl;
 use App\Http\Controllers\Prestamo\utilities\AdjuntarComprobanteUrl;
 use App\Http\Controllers\Prestamo\utilities\AdjuntarCronogramaUrl;
 use App\Http\Controllers\Prestamo\utilities\CrearCronograma;
@@ -99,17 +100,17 @@ class PrestamoController extends Controller
      * @param AdjuntarComprobanteUrl $adjuntador El servicio para adjuntar las URLs.
      * @return \Illuminate\Http\JsonResponse
      */
-    public function show(Prestamo $prestamo, AdjuntarComprobanteUrl $adjuntador)
+    public function show(Prestamo $prestamo, AdjuntarComprobanteUrl $adjuntadorcomprobante , AdjuntarCapturaPagoUrl $adjuntadorcapturapago)
     {
         // Carga las relaciones principales
         $prestamo->load(['cliente.datos', 'asesor.datos', 'producto', 'cuota']);
 
         // 2. Delegar la lógica de adjuntar URLs al servicio
-        $adjuntador->execute($prestamo->cuota, $prestamo);
+        $adjuntadorcomprobante->execute($prestamo->cuota, $prestamo);
+        $adjuntadorcapturapago->execute($prestamo->cuota, $prestamo);
 
         return response()->json($prestamo);
     }
-
 
       /**
      * Update the specified resource in storage.

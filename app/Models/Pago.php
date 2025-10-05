@@ -14,7 +14,7 @@ class Pago extends Model
         'fecha_pago',
         'observaciones',
         'id_Usuario',
-        'modalidad',
+        'modalidad'
     ];
 
     public function cuota()

@@ -63,6 +63,10 @@ Route::middleware(['auth.jwt', 'checkRoleMW:cajero'])->group(function () {
 
     //RUTAS PRESTAMO
     Route::post('/prestamo/reprogramar', [PrestamoController::class, 'reprogramar']);
+
+    //RUTAS PAGOS
+    Route::post('pago/captura/aceptar', [PagoController::class, 'aceptarCaptura']);
+    Route::post('pago/captura/rechazar', [PagoController::class, 'rechazarCaptura']);
     
 });
 
@@ -75,6 +79,9 @@ Route::middleware(['auth.jwt', 'CheckRolesMW_ADMIN_CAJERO'])->group(function () 
 
     //RUTAS PRESTAMOS
     Route::get('/prestamos/index', [PrestamoController::class, 'index']);
+
+    //RUTAS PAGOS
+
     
 });
 

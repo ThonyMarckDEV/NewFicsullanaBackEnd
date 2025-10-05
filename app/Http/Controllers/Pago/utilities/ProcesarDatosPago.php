@@ -71,8 +71,7 @@ class ProcesarDatosPago
                     'excedente' => 0,
                     'fecha_pago' => $validatedData['fecha_pago'],
                     'modalidad' => $modalidadPago,
-                    'metodo_pago' => $validatedData['metodo_pago'] ?? null,
-                    'ruta_comprobante_cliente' => $rutaComprobanteCliente,
+                    'ruta_captura_pago_cliente' => $rutaComprobanteCliente,
                     'id_Usuario' => Auth::id(),
                 ]);
 
