@@ -55,7 +55,6 @@ class PagoController extends Controller
             return response()->json(['message' => 'Pago registrado con éxito.'], 201);
 
         } catch (\Exception $e) {
-            // Log::error('Error al registrar pago: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Error al registrar el pago.',
                 'details' => $e->getMessage(),
