@@ -61,17 +61,13 @@ Route::middleware(['auth.jwt', 'checkRoleMW:asesor'])->group(function () {
 // RUTAS PARA cliente VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)
 Route::middleware(['auth.jwt', 'checkRoleMW:cajero'])->group(function () { 
 
-    //RUTAS CRUD PAGOS
-    Route::post('/pago/store', [PagoController::class, 'store']);
-    Route::post('/pago/cancelar-total', [PagoController::class, 'cancelarTotal']);
-
     //RUTAS PRESTAMO
     Route::post('/prestamo/reprogramar', [PrestamoController::class, 'reprogramar']);
-
+    
 });
 
 
-// RUTAS PARA ROL ADMIN Y CAJERO
+// RUTAS PARA ROL ADMIN Y CAJERO 
 Route::middleware(['auth.jwt', 'CheckRolesMW_ADMIN_CAJERO'])->group(function () { 
     
     //RUTAS CLIENTES
@@ -79,7 +75,21 @@ Route::middleware(['auth.jwt', 'CheckRolesMW_ADMIN_CAJERO'])->group(function () 
 
     //RUTAS PRESTAMOS
     Route::get('/prestamos/index', [PrestamoController::class, 'index']);
+    
+});
+
+
+// RUTAS PARA ROL ADMIN Y CAJERO Y CLIENTE
+Route::middleware(['auth.jwt', 'CheckRolesMW_ADMIN_CAJERO_CLIENTE'])->group(function () { 
+
+    //RUTAS PRESTAMOS
+    Route::get('/prestamos/index', [PrestamoController::class, 'index']);
     Route::get('/prestamo/show/{prestamo}', [PrestamoController::class, 'show']);
+
+     //RUTAS CRUD PAGOS
+    Route::post('/pago/store', [PagoController::class, 'store']);
+    Route::post('/pago/cancelar-total', [PagoController::class, 'cancelarTotal']);
+
 });
 
 // RUTAS PARA VARIOS ROLES

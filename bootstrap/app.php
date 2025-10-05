@@ -5,6 +5,7 @@ use App\Http\Middleware\CheckRolesMW;
 use App\Http\Middleware\CheckRolesMW_ADMIN_ASESOR;
 use App\Http\Middleware\CheckRolesMW_ADMIN_AUDITOR;
 use App\Http\Middleware\CheckRolesMW_ADMIN_CAJERO;
+use App\Http\Middleware\CheckRolesMW_ADMIN_CAJERO_CLIENTE;
 use App\Http\Middleware\CheckRolesMW_JEFE_NEGOCIOS_ASESOR;
 use App\Http\Middleware\CorsMiddleware;
 use App\Http\Middleware\JWTAuthMiddleware;
@@ -27,11 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
             //MIDDLEWARE PARA VERIFICAR ROL MULTIPLE
             'checkRolesMW' => CheckRolesMW::class,
             //MIDDLEWARE PARA ROL ADMIN Y ASESOR
-            'CheckRolesMW_JEFE_NEGOCIOS_ASESOR' => CheckRolesMW_JEFE_NEGOCIOS_ASESOR::class,
+            'CheckRolesMW_ADMIN_CAJERO_CLIENTE' => CheckRolesMW_ADMIN_CAJERO_CLIENTE::class,
             //MIDDLEWARE PARA ROL ADMIN Y ASESOR
             'CheckRolesMW_ADMIN_ASESOR' => CheckRolesMW_ADMIN_ASESOR::class,
-            //MIDDLEWARE PARA ROL ADMIN Y AUDITOR
-            'CheckRolesMW_ADMIN_AUDITOR' => CheckRolesMW_ADMIN_AUDITOR::class,
             //MIDDLEWARE PARA ROL ADMIN Y CLIENTE
             'CheckRolesMW_ADMIN_CAJERO' => CheckRolesMW_ADMIN_CAJERO::class,
             //MIDDLEWARE PARA AUTH DEL TOKEN (ahora usando nuestro middleware personalizado)

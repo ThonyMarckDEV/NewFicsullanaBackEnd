@@ -69,6 +69,7 @@ return new class extends Migration
             $table->text('observaciones')->nullable();
             $table->unsignedBigInteger('id_Usuario');
             $table->string('modalidad')->comment('PRESENCIAL , VIRTUAL');
+            $table->string('ruta_comprobante_cliente')->nullable();
             $table->timestamps();
             
             $table->foreign('id_Cuota')->references('id')->on('cuotas')->onDelete('cascade');

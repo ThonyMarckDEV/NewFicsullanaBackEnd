@@ -13,14 +13,32 @@ class StorePagoRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        // 1. Reglas base para todos los pagos
+        $rules = [
             'id_Cuota' => ['required', 'integer', 'exists:cuotas,id'],
             'monto_pagado' => ['required', 'numeric', 'min:0.01'],
             'fecha_pago' => ['required', 'date_format:Y-m-d'],
             'modalidad' => ['required', 'string', Rule::in(['PRESENCIAL', 'VIRTUAL'])],
             'numero_operacion' => ['nullable', 'string', 'max:255'],
-            'observaciones' => ['nullable', 'string', 'max:500'],
+            // 'observaciones' ya es nullable, no requiere cambio aquí.
         ];
+
+        // 2. Reglas condicionales: Si la modalidad es VIRTUAL, el comprobante es obligatorio.
+        if ($this->get('modalidad') === 'VIRTUAL') {
+            $rules['comprobante'] = [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,pdf', // Tipos de archivo permitidos
+                'max:5120', // Tamaño máximo: 5MB (ajusta según tus necesidades)
+            ];
+            // Asegúrate de que 'metodo_pago' (usado en ProcesarDatosPago) también esté validado si es necesario
+            $rules['metodo_pago'] = ['required', 'string', 'max:50'];
+        }
+        
+        // 3. Reglas condicionales: Si la modalidad es PRESENCIAL, 'observaciones' puede ser enviada.
+        // Si no se envía ninguna regla condicional para 'observaciones', se mantiene 'nullable' por defecto.
+        
+        return $rules;
     }
 
     /**

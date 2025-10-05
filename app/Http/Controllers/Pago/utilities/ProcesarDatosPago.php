@@ -7,27 +7,41 @@ use App\Models\Pago;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
+// Importaciones de servicios refactorizados (asumiendo que existen o que los crearás)
+use App\Http\Controllers\Pago\utilities\GuardarCapturaPago;
+use App\Http\Controllers\Pago\utilities\GenerarNumeroOperacion;
+use App\Http\Controllers\Pago\utilities\ActualizarEstadoCuota;
+use App\Http\Controllers\Pago\utilities\FinalizarPrestamo;
+use App\Http\Controllers\Pago\utilities\AplicarExcedente;
+use App\Http\Controllers\Pago\utilities\GenerarComprobantePago;
+
 class ProcesarDatosPago
 {
     protected $aplicadorExcedente;
     protected $generadorComprobante;
+    protected $guardarCapturaPago;
+    protected $generadorNumeroOperacion; // NUEVO
+    protected $actualizadorCuota;        // NUEVO
+    protected $finalizadorPrestamo;      // NUEVO
 
-    /**
-     * Inyectamos los servicios para aplicar excedentes y generar comprobantes.
-     */
-    public function __construct(AplicarExcedente $aplicadorExcedente, GenerarComprobantePago $generadorComprobante)
-    {
+    public function __construct(
+        AplicarExcedente $aplicadorExcedente,
+        GenerarComprobantePago $generadorComprobante,
+        GuardarCapturaPago $guardarCapturaPago,
+        GenerarNumeroOperacion $generadorNumeroOperacion, 
+        ActualizarEstadoCuota $actualizadorCuota,         
+        FinalizarPrestamo $finalizadorPrestamo          
+    ) {
         $this->aplicadorExcedente = $aplicadorExcedente;
         $this->generadorComprobante = $generadorComprobante;
+        $this->guardarCapturaPago = $guardarCapturaPago;
+        $this->generadorNumeroOperacion = $generadorNumeroOperacion; 
+        $this->actualizadorCuota = $actualizadorCuota;               
+        $this->finalizadorPrestamo = $finalizadorPrestamo;          
     }
 
     /**
-     * Procesa y registra un nuevo pago, aplicando excedentes y generando el comprobante.
-     *
-     * @param array $validatedData Datos del pago ya validados.
-     * @param Cuota $cuota La cuota que se está pagando.
-     * @return void
-     * @throws \Exception Si ocurre un error.
+     * Procesa y registra un nuevo pago.
      */
     public function execute(array $validatedData, Cuota $cuota): void
     {
@@ -35,46 +49,76 @@ class ProcesarDatosPago
             
             $prestamo = $cuota->prestamo;
             $montoPagadoHoy = (float) $validatedData['monto_pagado'];
+            $modalidadPago = $validatedData['modalidad'];
+            $pago = null; // Inicializar $pago
 
-            // 1. Calcular la deuda neta de la cuota actual.
-            $deudaNetaCuota = max(0, ($cuota->monto + $cuota->cargo_mora) - $cuota->excedente_anterior);
-
-            // 2. Calcular si el pago de hoy genera un nuevo excedente.
-            $nuevoExcedente = max(0, $montoPagadoHoy - $deudaNetaCuota);
-
-            // 3. Crear el registro del pago.
-            $pago = Pago::create([
-                'id_Cuota' => $cuota->id,
-                'monto_pagado' => $montoPagadoHoy,
-                'excedente' =>  $nuevoExcedente,
-                'fecha_pago' => $validatedData['fecha_pago'],
-                'modalidad' => $validatedData['modalidad'],
-                'observaciones' => $validatedData['observaciones'] ?? null,
-                'id_Usuario' => Auth::id(),
-            ]);
-
-            // 4. Generar y guardar el número de operación.
-            $pago->numero_operacion = str_pad($pago->id, 8, '0', STR_PAD_LEFT);
-            $pago->save();
-            
-            // 5. Generar el comprobante de pago en PDF.
-            $this->generadorComprobante->execute($pago);
-
-            // 6. Si el pago cubre la deuda neta, actualizar la cuota y aplicar excedente.
-            if ($montoPagadoHoy >= $deudaNetaCuota) {
-                $cuota->estado = 2; // Marcar cuota como Pagada
-                $cuota->save();
-
-                // Si se generó un nuevo excedente, aplicarlo a la siguiente cuota.
-                if ($nuevoExcedente > 0) {
-                    $this->aplicadorExcedente->execute($nuevoExcedente, $prestamo);
+            if ($modalidadPago === 'VIRTUAL') {
+                
+                $rutaComprobanteCliente = null;
+                
+                // 1. Guardar la captura si existe.
+                if (isset($validatedData['comprobante'])) {
+                    $rutaComprobanteCliente = $this->guardarCapturaPago->execute(
+                        $validatedData['comprobante'],
+                        $cuota
+                    );
                 }
-            }
 
-            // 7. Verificar si el préstamo se completó.
-            if ($prestamo->cuota()->where('estado', '!=', 2)->count() === 0) {
-                $prestamo->estado = 2; // Marcar préstamo como Pagado
-                $prestamo->save();
+                // 2. Crear el registro del pago VIRTUAL.
+                $pago = Pago::create([
+                    'id_Cuota' => $cuota->id,
+                    'monto_pagado' => $montoPagadoHoy,
+                    'excedente' => 0,
+                    'fecha_pago' => $validatedData['fecha_pago'],
+                    'modalidad' => $modalidadPago,
+                    'metodo_pago' => $validatedData['metodo_pago'] ?? null,
+                    'ruta_comprobante_cliente' => $rutaComprobanteCliente,
+                    'id_Usuario' => Auth::id(),
+                ]);
+
+                // 3. Generar y guardar el número de operación.
+                $this->generadorNumeroOperacion->execute($pago);
+
+                // 4. Actualizar el estado de la cuota (Prepagado = 5).
+                $this->actualizadorCuota->execute($cuota, 5);
+
+            } else { // Modalidad PRESENCIAL
+                
+                // 1. Calcular excedente.
+                $deudaNetaCuota = max(0, ($cuota->monto + $cuota->cargo_mora) - $cuota->excedente_anterior);
+                $nuevoExcedente = max(0, $montoPagadoHoy - $deudaNetaCuota);
+
+                // 2. Crear el registro del pago PRESENCIAL.
+                $pago = Pago::create([
+                    'id_Cuota' => $cuota->id,
+                    'monto_pagado' => $montoPagadoHoy,
+                    'excedente' => $nuevoExcedente,
+                    'fecha_pago' => $validatedData['fecha_pago'],
+                    'modalidad' => $modalidadPago,
+                    'observaciones' => $validatedData['observaciones'] ?? null,
+                    'id_Usuario' => Auth::id(),
+                ]);
+
+                // 3. Generar y guardar el número de operación.
+                $this->generadorNumeroOperacion->execute($pago);
+                
+                // 4. Lógica de liquidación.
+                if ($montoPagadoHoy >= $deudaNetaCuota) {
+                    
+                    // a) Actualizar el estado de la cuota (Pagada = 2).
+                    $this->actualizadorCuota->execute($cuota, 2); 
+
+                    // b) Aplicar excedente (si existe).
+                    if ($nuevoExcedente > 0) {
+                        $this->aplicadorExcedente->execute($nuevoExcedente, $prestamo);
+                    }
+                    
+                    // c) Verificar y finalizar el préstamo.
+                    $this->finalizadorPrestamo->execute($prestamo);
+                }
+                
+                // 5. Generar el comprobante de pago en PDF (asume que GenerarComprobantePago lo guarda).
+                $this->generadorComprobante->execute($pago);
             }
         });
     }
