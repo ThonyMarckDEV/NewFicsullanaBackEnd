@@ -45,8 +45,8 @@ class PasswordResetController extends Controller
             ], 404);
         }
 
-        // Check if user role is not client (idRol != 3)
-        if ($user->idRol !== 3) {
+        // Check if user role is not client (idRol != 2)
+        if ($user->idRol !== 2) {
             return response()->json([
                 'message' => 'Si no eres cliente y olvidaste tu contraseña, pídele al administrador que la cambie.',
             ], 403);
