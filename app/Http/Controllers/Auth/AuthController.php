@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers\Auth;
 
-//VALIDACIONES
-use App\Http\Controllers\Auth\services\PasswordResetService;
-
-
 //SERVICIOS
 use App\Http\Controllers\Auth\services\TokenService;
 use App\Http\Controllers\Auth\utilities\AuthValidations;
