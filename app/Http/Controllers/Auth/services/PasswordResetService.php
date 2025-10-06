@@ -26,12 +26,12 @@ class PasswordResetService
 
         // Delete existing tokens
         DB::table('password_reset_tokens')
-            ->where('idUsuario', $user->idUsuario)
+            ->where('id_Usuario', $user->id)
             ->delete();
 
         // Store new reset token
         DB::table('password_reset_tokens')->insert([
-            'idUsuario' => $user->idUsuario,
+            'id_Usuario' => $user->id,
             'token' => $resetToken,
             'ip_address' => $ipAddress,
             'device' => $userAgent,
@@ -41,11 +41,11 @@ class PasswordResetService
         ]);
 
         // Send reset email
-        $resetUrl = config('app.url') . "/reset-password/{$user->idUsuario}/{$resetToken}";
-        $contacto = $user->datos->contactos->where('tipo', 'PRINCIPAL')->first() ?? $user->datos->contactos->first();
+        $resetUrl = config('app.url') . "/reset-password/{$user->id}/{$resetToken}";
+        $contacto = $user->datos->contactos->first();
 
-        if ($contacto && $contacto->email) {
-            Mail::to($contacto->email)->send(new PasswordResetEmail($user, $resetUrl));
+        if ($contacto && $contacto->correo) {
+            Mail::to($contacto->correo)->send(new PasswordResetEmail($user, $resetUrl));
             return [
                 'success' => true,
                 'message' => 'Se ha enviado un correo para cambiar tu contraseña por seguridad. El enlace es válido por 10 minutos.',
@@ -67,16 +67,16 @@ class PasswordResetService
     public static function checkExistingResetToken(User $user): ?array
     {
         $existingToken = DB::table('password_reset_tokens')
-            ->where('idUsuario', $user->idUsuario)
+            ->where('id_Usuario', $user->id)
             ->where('expires_at', '>', now())
             ->first();
 
         if ($existingToken) {
-            $resetUrl = config('app.url') . "/reset-password/{$user->idUsuario}/{$existingToken->token}";
-            $contacto = $user->datos->contactos->where('tipo', 'PRINCIPAL')->first() ?? $user->datos->contactos->first();
+            $resetUrl = config('app.url') . "/reset-password/{$user->id}/{$existingToken->token}";
+            $contacto = $user->datos->contactos->first();
 
-            if ($contacto && $contacto->email) {
-                Mail::to($contacto->email)->send(new PasswordResetEmail($user, $resetUrl));
+            if ($contacto && $contacto->correo) {
+                Mail::to($contacto->correo)->send(new PasswordResetEmail($user, $resetUrl));
                 return [
                     'success' => true,
                     'message' => 'Se ha reenviado un correo para cambiar tu contraseña por seguridad. El enlace es válido por 10 minutos.',

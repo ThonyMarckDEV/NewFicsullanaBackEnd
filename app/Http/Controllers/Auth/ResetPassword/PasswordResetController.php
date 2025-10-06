@@ -46,7 +46,7 @@ class PasswordResetController extends Controller
         }
 
         // Check if user role is not client (idRol != 2)
-        if ($user->idRol !== 2) {
+        if ($user->id_Rol !== 2) {
             return response()->json([
                 'message' => 'Si no eres cliente y olvidaste tu contraseña, pídele al administrador que la cambie.',
             ], 403);
@@ -65,22 +65,23 @@ class PasswordResetController extends Controller
 
     /**
      * Display the password reset form.
+     * Note: Ensure your route parameter is named {id_Usuario} for consistency.
      *
-     * @param string $idUsuario
+     * @param string $id_Usuario
      * @param string $token
      * @return \Illuminate\View\View
      */
-    public function showResetForm($idUsuario, $token)
+    public function showResetForm($id_Usuario, $token)
     {
         $resetToken = DB::table('password_reset_tokens')
-            ->where('idUsuario', $idUsuario)
+            ->where('id_Usuario', $id_Usuario)
             ->where('token', $token)
             ->first();
 
         if (!$resetToken) {
             return view('reset-password', [
                 'error' => 'Enlace de restablecimiento inválido.',
-                'idUsuario' => $idUsuario,
+                'id_Usuario' => $id_Usuario,
                 'token' => $token,
             ]);
         }
@@ -88,40 +89,41 @@ class PasswordResetController extends Controller
         if (Carbon::parse($resetToken->expires_at)->isPast()) {
             return view('reset-password', [
                 'error' => 'Enlace de restablecimiento expirado. Solicita un nuevo enlace.',
-                'idUsuario' => $idUsuario,
+                'id_Usuario' => $id_Usuario,
                 'token' => $token,
             ]);
         }
 
         return view('reset-password', [
-            'idUsuario' => $idUsuario,
+            'id_Usuario' => $id_Usuario,
             'token' => $token,
         ]);
     }
 
     /**
      * Handle the password reset submission.
+     * Note: Ensure your route parameter is named {id_Usuario} for consistency.
      *
      * @param Request $request
-     * @param string $idUsuario
+     * @param string $id_Usuario
      * @param string $token
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function reset(Request $request, $idUsuario, $token)
+    public function reset(Request $request, $id_Usuario, $token)
     {
         $resetToken = DB::table('password_reset_tokens')
-            ->where('idUsuario', $idUsuario)
+            ->where('id_Usuario', $id_Usuario)
             ->where('token', $token)
             ->first();
 
         if (!$resetToken || Carbon::parse($resetToken->expires_at)->isPast()) {
-            return redirect()->route('password.reset.form', ['idUsuario' => $idUsuario, 'token' => $token])
+            return redirect()->route('password.reset.form', ['id_Usuario' => $id_Usuario, 'token' => $token])
                 ->with('error', 'Enlace de restablecimiento inválido o expirado.');
         }
 
-        $user = User::with('datos')->find($idUsuario);
+        $user = User::with('datos')->find($id_Usuario);
         if (!$user) {
-            return redirect()->route('password.reset.form', ['idUsuario' => $idUsuario, 'token' => $token])
+            return redirect()->route('password.reset.form', ['id_Usuario' => $id_Usuario, 'token' => $token])
                 ->with('error', 'Usuario no encontrado.');
         }
 
@@ -147,10 +149,10 @@ class PasswordResetController extends Controller
 
         // Delete reset token
         DB::table('password_reset_tokens')
-            ->where('idUsuario', $user->idUsuario)
+            ->where('id_Usuario', $user->id)
             ->delete();
 
-        return redirect()->route('password.reset.form', ['idUsuario' => $idUsuario, 'token' => $token])
+        return redirect()->route('password.reset.form', ['id_Usuario' => $id_Usuario, 'token' => $token])
             ->with('success', 'Contraseña cambiada exitosamente. Por favor, inicia sesión.');
     }
 }

@@ -27,7 +27,7 @@
                 <a href="{{ config('app.front_url') }}" class="text-sm text-red-500 hover:underline">Volver al inicio de sesión</a>
             </div>
         @else
-            <form method="POST" action="{{ route('password.reset.submit', ['idUsuario' => $idUsuario, 'token' => $token]) }}" class="space-y-6">
+            <form method="POST" action="{{ route('password.reset.submit', ['id_Usuario' => $id_Usuario, 'token' => $token]) }}" class="space-y-6">
                 @csrf
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
