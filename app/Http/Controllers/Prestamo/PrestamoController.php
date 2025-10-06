@@ -23,8 +23,9 @@ use Illuminate\Support\Facades\Storage;
 
 class PrestamoController extends Controller
 {
-   public function index(Request $request, VerificarCuotasPagadas $verificador, AdjuntarCronogramaUrl $adjuntadorUrl)
+    public function index(Request $request, VerificarCuotasPagadas $verificador, AdjuntarCronogramaUrl $adjuntadorUrl)
     {
+        // 1. Validar la entrada (sin cambios)
         $validated = $request->validate([
             'search' => 'nullable|string|max:50',
             'sort_by' => 'nullable|string|in:id,monto,frecuencia,fecha_generacion,estado',
@@ -35,19 +36,35 @@ class PrestamoController extends Controller
         $sortBy = $validated['sort_by'] ?? 'id';
         $sortOrder = $validated['sort_order'] ?? 'desc';
 
-        $prestamos = Prestamo::with(['cliente.datos', 'asesor.datos'])
-            ->when($searchQuery, function ($query, $search) {
-                $query->where('id', 'like', "%{$search}%")
-                    ->orWhereHas('cliente.datos', function ($q) use ($search) {
-                        $q->where('dni', 'like', "%{$search}%")
-                          ->orWhere('nombre', 'like', "%{$search}%")
-                          ->orWhere('apellidoPaterno', 'like', "%{$search}%");
+        // 2. Obtener el usuario autenticado
+        $user = $request->user();
+
+        // 3. Iniciar la consulta base del modelo Prestamo
+        $prestamosQuery = Prestamo::with(['cliente.datos', 'asesor.datos']);
+
+        // 4. APLICAR FILTRO POR ROL
+        // Si el usuario es un cliente (id_Rol = 2), filtrar por su ID de cliente.
+        if ($user->id_Rol === 2) {
+            $prestamosQuery->where('id_Cliente', $user->id);
+        }
+
+        // 5. Aplicar la lógica de búsqueda (ya está correctamente acotada por el filtro anterior)
+        $prestamosQuery->when($searchQuery, function ($query, $search) {
+            // Se envuelve la búsqueda en un closure para que el 'orWhereHas' no interfiera con el filtro de rol
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                    ->orWhereHas('cliente.datos', function ($subQ) use ($search) {
+                        $subQ->where('dni', 'like', "%{$search}%")
+                              ->orWhere('nombre', 'like', "%{$search}%")
+                              ->orWhere('apellidoPaterno', 'like', "%{$search}%");
                     });
-            })
-            ->orderBy($sortBy, $sortOrder)
-            ->paginate(10);
+            });
+        });
+
+        // 6. Aplicar ordenamiento y paginación
+        $prestamos = $prestamosQuery->orderBy($sortBy, $sortOrder)->paginate(10);
         
-        // 2. Usar los servicios para transformar la colección
+        // 7. Usar los servicios para transformar la colección (sin cambios)
         $prestamos->getCollection()->transform(function ($prestamo) use ($verificador, $adjuntadorUrl) {
             $verificador->execute($prestamo);
             $adjuntadorUrl->execute($prestamo);
