@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\services\PasswordResetService;
 use App\Http\Controllers\Auth\services\TokenService;
 use App\Http\Controllers\Auth\utilities\AuthValidations;
 
+use App\Http\Controllers\Auth\utilities\LoginSecurityUtility;
 use App\Http\Controllers\Controller;
 use App\Mail\PasswordResetEmail;
 use App\Models\User;
@@ -24,7 +25,7 @@ use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
-    /**
+  /**
      * Handle username/password login.
      *
      * @param Request $request
@@ -56,8 +57,15 @@ class AuthController extends Controller
                     'message' => 'Error: estado del usuario inactivo',
                 ], 403);
             }
+            
+            // <-- 2. Llama a la utilidad de seguridad
+            $securityCheckResponse = LoginSecurityUtility::checkInitialPassword($user, $request);
+            if ($securityCheckResponse) {
+                // Si la utilidad devuelve una respuesta, la retornamos y detenemos el login.
+                return $securityCheckResponse;
+            }
 
-            // Delete existing refresh tokens for new session
+            // Si la comprobación de seguridad pasa, el login continúa normalmente...
             DB::table('refresh_tokens')
                 ->where('id_Usuario', $user->id)
                 ->delete();
