@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Prestamo;
 use App\Http\Controllers\Prestamo\services\AdjuntarCapturaPagoUrl;
 use App\Http\Controllers\Prestamo\services\AdjuntarComprobanteUrl;
 use App\Http\Controllers\Prestamo\services\AdjuntarCronogramaUrl;
+use App\Http\Controllers\Prestamo\services\CalcularMora;
 use App\Http\Controllers\Prestamo\services\CrearCronograma;
 use App\Http\Controllers\Prestamo\services\CrearCuotasPrestamo;
 use App\Http\Controllers\Prestamo\services\EliminarCronograma;
@@ -25,9 +26,15 @@ use Illuminate\Support\Facades\DB;
 
 class PrestamoController extends Controller
 {
-    public function index(Request $request, VerificarCuotasPagadas $verificador, AdjuntarCronogramaUrl $adjuntadorUrl)
-    {
-        // 1. Validar la entrada (sin cambios)
+
+
+    public function index(
+        Request $request,
+        VerificarCuotasPagadas $verificador,
+        AdjuntarCronogramaUrl $adjuntadorUrl,
+        CalcularMora $calculadorMora
+    ) {
+        // 1. Validar la entrada
         $validated = $request->validate([
             'search' => 'nullable|string|max:50',
             'sort_by' => 'nullable|string|in:id,monto,frecuencia,fecha_generacion,estado',
@@ -42,35 +49,46 @@ class PrestamoController extends Controller
         $user = $request->user();
 
         // 3. Iniciar la consulta base del modelo Prestamo
-        $prestamosQuery = Prestamo::with(['cliente.datos', 'asesor.datos']);
+        // Usando el nombre correcto de tu relación: 'cuota' (singular)
+        $prestamosQuery = Prestamo::with(['cliente.datos', 'asesor.datos', 'cuota']);
 
         // 4. APLICAR FILTRO POR ROL
-        // Si el usuario es un cliente (id_Rol = 2), filtrar por su ID de cliente.
         if ($user->id_Rol === 2) {
             $prestamosQuery->where('id_Cliente', $user->id);
         }
 
-        // 5. Aplicar la lógica de búsqueda (ya está correctamente acotada por el filtro anterior)
+        // 5. Aplicar la lógica de búsqueda
         $prestamosQuery->when($searchQuery, function ($query, $search) {
-            // Se envuelve la búsqueda en un closure para que el 'orWhereHas' no interfiera con el filtro de rol
             $query->where(function ($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
                     ->orWhereHas('cliente.datos', function ($subQ) use ($search) {
                         $subQ->where('dni', 'like', "%{$search}%")
-                              ->orWhere('nombre', 'like', "%{$search}%")
-                              ->orWhere('apellidoPaterno', 'like', "%{$search}%");
+                            ->orWhere('nombre', 'like', "%{$search}%")
+                            ->orWhere('apellidoPaterno', 'like', "%{$search}%");
                     });
             });
         });
 
         // 6. Aplicar ordenamiento y paginación
         $prestamos = $prestamosQuery->orderBy($sortBy, $sortOrder)->paginate(10);
-        
-        // 7. Usar los servicios para transformar la colección (sin cambios)
-        $prestamos->getCollection()->transform(function ($prestamo) use ($verificador, $adjuntadorUrl) {
+
+        // 7. Usar los servicios para transformar la colección
+        $prestamos->getCollection()->transform(function ($prestamo) use ($verificador, $adjuntadorUrl, $calculadorMora) {
+            
+            // Itera sobre la relación correcta: $prestamo->cuota (singular)
+            // Se usa 'if' para asegurar que la relación exista y no sea nula antes de iterar
+            if ($prestamo->cuota) {
+                foreach ($prestamo->cuota as $item_cuota) {
+                    $calculadorMora->execute($item_cuota);
+                }
+            }
+
+            // Lógica existente
             $verificador->execute($prestamo);
             $adjuntadorUrl->execute($prestamo);
-            return $prestamo;
+            
+            // Recargar usando también el nombre singular
+            return $prestamo->fresh(['cliente.datos', 'asesor.datos', 'cuota']);
         });
 
         return response()->json($prestamos);

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Http\Controllers\Prestamo\services;
 
 use App\Models\Cuota;
 use App\Models\CargoMora;
