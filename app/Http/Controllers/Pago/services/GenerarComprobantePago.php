@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Pago\utilities;
+namespace App\Http\Controllers\Pago\services;
 
 use App\Models\Pago;
 use App\Models\Prestamo;

@@ -7,13 +7,13 @@ use App\Models\Pago;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
-// Importaciones de servicios refactorizados (asumiendo que existen o que los crearás)
-use App\Http\Controllers\Pago\utilities\GuardarCapturaPago;
-use App\Http\Controllers\Pago\utilities\GenerarNumeroOperacion;
-use App\Http\Controllers\Pago\utilities\ActualizarEstadoCuota;
-use App\Http\Controllers\Pago\utilities\FinalizarPrestamo;
-use App\Http\Controllers\Pago\utilities\AplicarExcedente;
-use App\Http\Controllers\Pago\utilities\GenerarComprobantePago;
+
+use App\Http\Controllers\Pago\services\GuardarCapturaPago;
+use App\Http\Controllers\Pago\services\GenerarNumeroOperacion;
+use App\Http\Controllers\Pago\services\ActualizarEstadoCuota;
+use App\Http\Controllers\Pago\services\FinalizarPrestamo;
+use App\Http\Controllers\Pago\services\AplicarExcedente;
+use App\Http\Controllers\Pago\services\GenerarComprobantePago;
 
 class ProcesarDatosPago
 {

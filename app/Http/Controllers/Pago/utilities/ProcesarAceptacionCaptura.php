@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Pago\utilities;
 
+use App\Http\Controllers\Pago\services\ActualizarEstadoCuota;
+use App\Http\Controllers\Pago\services\FinalizarPrestamo;
+use App\Http\Controllers\Pago\services\GenerarComprobantePago;
+use App\Http\Controllers\Pago\services\GenerarNumeroOperacion;
 use App\Models\Cuota;
-use App\Models\Pago;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -23,7 +26,6 @@ class ProcesarAceptacionCaptura
         $this->generadorNumeroOperacion = $generadorNumeroOperacion;
         $this->actualizadorCuota = $actualizadorCuota;
         $this->finalizadorPrestamo = $finalizadorPrestamo;
-        // Faltaba asignar esta propiedad
         $this->generadorComprobante = $generadorComprobante;
     }
 

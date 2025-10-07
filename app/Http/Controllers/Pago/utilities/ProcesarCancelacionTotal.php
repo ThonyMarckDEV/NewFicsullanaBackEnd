@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Pago\utilities;
 
+use App\Http\Controllers\Pago\services\GenerarComprobantePago;
 use App\Models\Prestamo;
 use App\Models\Pago;
 use Illuminate\Support\Facades\DB;
