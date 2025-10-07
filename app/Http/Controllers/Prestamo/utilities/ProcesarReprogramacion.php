@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Prestamo\utilities;
 
+use App\Http\Controllers\Prestamo\services\CrearCronograma;
+use App\Http\Controllers\Prestamo\services\CrearCuotasPrestamo;
 use App\Models\Prestamo;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;

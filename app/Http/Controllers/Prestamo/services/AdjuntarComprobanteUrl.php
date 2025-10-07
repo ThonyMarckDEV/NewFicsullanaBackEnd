@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Prestamo\utilities;
+namespace App\Http\Controllers\Prestamo\services;
 
 use App\Models\Prestamo;
 use Illuminate\Database\Eloquent\Collection;
