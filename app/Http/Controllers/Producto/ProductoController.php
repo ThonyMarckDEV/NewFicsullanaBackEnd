@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Producto;
 
+use App\Http\Requests\ProductoRequest\StoreProductoRequest;
+use App\Http\Requests\ProductoRequest\UpdateProductoRequest;
+
 use App\Models\Producto;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreProductoRequest;
-use App\Http\Requests\UpdateProductoRequest;
 use Exception;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+
 
 class ProductoController extends Controller
 {
