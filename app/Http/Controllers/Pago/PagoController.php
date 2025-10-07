@@ -6,13 +6,14 @@ use App\Http\Controllers\Pago\utilities\ProcesarAceptacionCaptura;
 use App\Http\Controllers\Pago\utilities\ProcesarCancelacionTotal;
 use App\Http\Controllers\Pago\utilities\ProcesarDatosPago;
 use App\Http\Controllers\Pago\utilities\ProcesarRechazoCaptura;
-use App\Http\Requests\StorePagoRequest;
+
+use App\Http\Requests\PagoRequest\StorePagoRequest;
+
 use App\Models\Cuota;
 use App\Models\Pago;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+
 
 class PagoController extends Controller
 {

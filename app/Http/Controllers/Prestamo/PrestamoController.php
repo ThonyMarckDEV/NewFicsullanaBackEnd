@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers\Prestamo;
 
-use App\Http\Controllers\Prestamo\utilities\AdjuntarCapturaPagoUrl;
-use App\Http\Controllers\Prestamo\utilities\AdjuntarComprobanteUrl;
-use App\Http\Controllers\Prestamo\utilities\AdjuntarCronogramaUrl;
-use App\Http\Controllers\Prestamo\utilities\CrearCronograma;
-use App\Http\Controllers\Prestamo\utilities\CrearCuotasPrestamo;
-use App\Http\Controllers\Prestamo\utilities\EliminarCronograma;
+use App\Http\Controllers\Prestamo\services\AdjuntarCapturaPagoUrl;
+use App\Http\Controllers\Prestamo\services\AdjuntarComprobanteUrl;
+use App\Http\Controllers\Prestamo\services\AdjuntarCronogramaUrl;
+use App\Http\Controllers\Prestamo\services\CrearCronograma;
+use App\Http\Controllers\Prestamo\services\CrearCuotasPrestamo;
+use App\Http\Controllers\Prestamo\services\EliminarCronograma;
+use App\Http\Controllers\Prestamo\services\VerificarCuotasPagadas;
+
 use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
 use App\Http\Controllers\Prestamo\utilities\ProcesarReprogramacion;
-use App\Http\Controllers\Prestamo\utilities\VerificarCuotasPagadas;
-use App\Http\Requests\ReprogramarPrestamoRequest;
-use App\Http\Requests\StorePrestamoRequest;
-use App\Http\Requests\UpdatePrestamoRequest;
+
+use App\Http\Requests\PrestamoRequest\ReprogramarPrestamoRequest;
+use App\Http\Requests\PrestamoRequest\StorePrestamoRequest;
+use App\Http\Requests\PrestamoRequest\UpdatePrestamoRequest;
+
 use App\Models\Prestamo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
