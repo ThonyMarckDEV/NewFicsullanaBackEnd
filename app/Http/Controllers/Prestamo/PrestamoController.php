@@ -27,7 +27,6 @@ use Illuminate\Support\Facades\DB;
 class PrestamoController extends Controller
 {
 
-
     public function index(
         Request $request,
         VerificarCuotasPagadas $verificador,
@@ -69,26 +68,27 @@ class PrestamoController extends Controller
             });
         });
 
-        // 6. Aplicar ordenamiento y paginación
-        $prestamos = $prestamosQuery->orderBy($sortBy, $sortOrder)->paginate(10);
+        $prestamos = $prestamosQuery->orderBy('id', 'desc')->paginate(10);
 
-        // 7. Usar los servicios para transformar la colección
+        // Usa los servicios para transformar la colección
         $prestamos->getCollection()->transform(function ($prestamo) use ($verificador, $adjuntadorUrl, $calculadorMora) {
             
-            // Itera sobre la relación correcta: $prestamo->cuota (singular)
-            // Se usa 'if' para asegurar que la relación exista y no sea nula antes de iterar
+            // a. Primero, ejecuta los servicios que modifican el estado en la BD
             if ($prestamo->cuota) {
                 foreach ($prestamo->cuota as $item_cuota) {
                     $calculadorMora->execute($item_cuota);
                 }
             }
-
-            // Lógica existente
             $verificador->execute($prestamo);
-            $adjuntadorUrl->execute($prestamo);
             
-            // Recargar usando también el nombre singular
-            return $prestamo->fresh(['cliente.datos', 'asesor.datos', 'cuota']);
+            // b. Luego, recarga el modelo para tener la versión más actualizada
+            $prestamoRefrescado = $prestamo->fresh(['cliente.datos', 'asesor.datos', 'cuota']);
+
+            // c. FINALMENTE, adjunta la URL al modelo ya refrescado
+            $adjuntadorUrl->execute($prestamoRefrescado);
+            
+            // d. Devuelve el modelo final que ahora tiene la URL
+            return $prestamoRefrescado;
         });
 
         return response()->json($prestamos);
