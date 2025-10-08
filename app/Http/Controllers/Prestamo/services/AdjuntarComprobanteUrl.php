@@ -9,6 +9,19 @@ use Illuminate\Support\Facades\Storage;
 class AdjuntarComprobanteUrl
 {
     /**
+     * @var VerificarEstadoStorage
+     */
+    protected $storageService; // <-- 2. AÑADE LA PROPIEDAD
+
+    /**
+     * Inyecta el servicio para verificar el estado del storage.
+     */
+    public function __construct(VerificarEstadoStorage $storageService) // <-- 3. CREA EL CONSTRUCTOR
+    {
+        $this->storageService = $storageService;
+    }
+
+    /**
      * Itera sobre una colección de cuotas y adjunta la URL del comprobante más reciente a las que están pagadas.
      *
      * @param Collection $cuotas La colección de cuotas de un préstamo.
@@ -17,7 +30,11 @@ class AdjuntarComprobanteUrl
      */
     public function execute(Collection $cuotas, Prestamo $prestamo): void
     {
-        $cuotas->each(function ($cuota) use ($prestamo) {
+        // 4. Obtiene el disco y la instancia de Storage una sola vez
+        $disk = $this->storageService->obtenerDisco();
+        $storage = Storage::disk($disk);
+
+        $cuotas->each(function ($cuota) use ($prestamo, $storage) { // <-- Pasa $storage al closure
             // Por defecto, la URL es nula
             $cuota->comprobante_url = null;
 
@@ -25,13 +42,14 @@ class AdjuntarComprobanteUrl
             if ($cuota->estado == 2) {
                 $directorio = "clientes/{$prestamo->id_Cliente}/prestamos/{$prestamo->id}/cuotas/{$cuota->id}";
                 
-                // Buscar todos los archivos en ese directorio
-                $archivos = Storage::disk('public')->files($directorio);
+                // Busca todos los archivos usando la instancia de Storage correcta
+                $archivos = $storage->files($directorio);
 
                 if (!empty($archivos)) {
-                    // Ordenar para encontrar el más reciente y asignar su URL
+                    // Ordena para encontrar el más reciente y asignar su URL
                     rsort($archivos);
-                    $cuota->comprobante_url = Storage::url($archivos[0]);
+                    // Genera la URL usando la instancia de Storage correcta
+                    $cuota->comprobante_url = $storage->url($archivos[0]);
                 }
             }
         });
