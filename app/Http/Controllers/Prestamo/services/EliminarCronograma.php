@@ -7,7 +7,25 @@ use Illuminate\Support\Facades\Storage;
 class EliminarCronograma
 {
     /**
-     * Elimina el directorio completo de un préstamo, incluyendo sus cronogramas.
+     * Instancia del servicio para verificar el estado del almacenamiento.
+     *
+     * @var VerificarEstadoStorage
+     */
+    private $verificadorStorage;
+
+    /**
+     * Constructor que inyecta el servicio de verificación de almacenamiento.
+     *
+     * @param VerificarEstadoStorage $verificadorStorage
+     */
+    public function __construct(VerificarEstadoStorage $verificadorStorage)
+    {
+        $this->verificadorStorage = $verificadorStorage;
+    }
+
+    /**
+     * Elimina el directorio completo de un préstamo, incluyendo sus cronogramas,
+     * determinando primero el disco de almacenamiento correcto.
      *
      * @param int $clienteId El ID del cliente.
      * @param int $prestamoId El ID del préstamo.
@@ -15,13 +33,16 @@ class EliminarCronograma
      */
     public function execute(int $clienteId, int $prestamoId): void
     {
-        // 1. Construir la ruta del directorio del préstamo.
+        // 1. Determinar qué disco se está utilizando ('minio' o 'public').
+        $disco = $this->verificadorStorage->obtenerDisco();
+
+        // 2. Construir la ruta del directorio del préstamo.
         $directorioPrestamo = "clientes/{$clienteId}/prestamos/{$prestamoId}";
 
-        // 2. Verificar si el directorio existe antes de intentar borrarlo.
-        if (Storage::disk('public')->exists($directorioPrestamo)) {
-            // 3. Eliminar el directorio completo del almacenamiento 'public'.
-            Storage::disk('public')->deleteDirectory($directorioPrestamo);
+        // 3. Verificar si el directorio existe en el disco correspondiente.
+        if (Storage::disk($disco)->exists($directorioPrestamo)) {
+            // 4. Eliminar el directorio completo del almacenamiento correcto.
+            Storage::disk($disco)->deleteDirectory($directorioPrestamo);
         }
     }
 }
