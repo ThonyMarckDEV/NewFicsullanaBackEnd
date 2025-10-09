@@ -48,7 +48,7 @@ class CrearCronograma
         $filePath = "clientes/{$idCliente}/prestamos/{$prestamoId}/cronograma/{$fileName}";
 
         // 4. Determinar en qué disco guardar el archivo
-        // Si el estado es 2, se usará 'minio' y guardará en el bucket 'ficsullana'.
+        // Si el estado es 2, se usará 'minio' y guardará en el bucket .
         // De lo contrario, usará el disco 'public'.
         $disk = $this->verificadorStorage->obtenerDisco();
 
