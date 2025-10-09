@@ -63,10 +63,13 @@ Route::middleware(['auth.jwt', 'checkRoleMW:cajero'])->group(function () {
 
     //RUTAS PRESTAMO
     Route::post('/prestamo/reprogramar', [PrestamoController::class, 'reprogramar']);
+    Route::post('/prestamo/cuotas/{cuota}/reducir-mora', [PrestamoController::class, 'reducirMora']);
 
     //RUTAS PAGOS
     Route::post('pago/captura/aceptar', [PagoController::class, 'aceptarCaptura']);
     Route::post('pago/captura/rechazar', [PagoController::class, 'rechazarCaptura']);
+
+
     
 });
 

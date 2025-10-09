@@ -18,6 +18,7 @@ use App\Http\Requests\PrestamoRequest\ReprogramarPrestamoRequest;
 use App\Http\Requests\PrestamoRequest\StorePrestamoRequest;
 use App\Http\Requests\PrestamoRequest\UpdatePrestamoRequest;
 
+use App\Models\Cuota;
 use App\Models\Prestamo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -26,6 +27,71 @@ use Illuminate\Support\Facades\DB;
 
 class PrestamoController extends Controller
 {
+
+     /**
+     * Aplica una reducción porcentual a la mora de una cuota.
+     *
+     * @param Request $request
+     * @param Cuota $cuota
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reducirMora(Request $request, Cuota $cuota)
+    {
+        try {
+            // 1. Validar la entrada
+            $validated = $request->validate([
+                'porcentaje_reduccion' => 'required|numeric|min:1|max:100',
+            ]);
+
+            // 2. Verificar condiciones
+            if ($cuota->cargo_mora <= 0) {
+                return response()->json(['message' => 'Esta cuota no tiene mora para reducir.'], 422);
+            }
+            if ($cuota->reduccion_mora_aplicada) {
+                return response()->json(['message' => 'Ya se ha aplicado una reducción de mora a esta cuota.'], 422);
+            }
+
+            // 3. Iniciar transacción
+            DB::beginTransaction();
+
+            $porcentaje = $validated['porcentaje_reduccion'];
+            $moraOriginal = $cuota->cargo_mora;
+            
+            // 4. Calcular el nuevo valor de la mora
+            $montoAReducir = $moraOriginal * ($porcentaje / 100);
+            $nuevaMora = $moraOriginal - $montoAReducir;
+
+            // 5. Actualizar la cuota en la base de datos
+            $cuota->update([
+                'cargo_mora' => $nuevaMora,
+                'mora_reducida' => $porcentaje,
+                'reduccion_mora_aplicada' => true,
+            ]);
+            
+            // 6. Confirmar transacción
+            DB::commit();
+
+            return response()->json([
+                'type' => 'success',
+                'message' => 'Reducción de mora aplicada con éxito.',
+                'data' => $cuota->fresh(), // Devuelve la cuota actualizada
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Datos de entrada inválidos.',
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Error al aplicar la reducción de mora.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function index(
         Request $request,
