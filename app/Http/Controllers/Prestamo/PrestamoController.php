@@ -9,6 +9,7 @@ use App\Http\Controllers\Prestamo\services\CalcularMora;
 use App\Http\Controllers\Prestamo\services\CrearCronograma;
 use App\Http\Controllers\Prestamo\services\CrearCuotasPrestamo;
 use App\Http\Controllers\Prestamo\services\EliminarCronograma;
+use App\Http\Controllers\Prestamo\services\ReducirMora;
 use App\Http\Controllers\Prestamo\services\VerificarCuotasPagadas;
 
 use App\Http\Controllers\Prestamo\utilities\ProcesarDatosPrestamo;
@@ -28,53 +29,33 @@ use Illuminate\Support\Facades\DB;
 class PrestamoController extends Controller
 {
 
-     /**
+ /**
      * Aplica una reducción porcentual a la mora de una cuota.
      *
      * @param Request $request
      * @param Cuota $cuota
+     * @param ReducirMora $reductorDeMora El servicio para aplicar la reducción.
      * @return \Illuminate\Http\JsonResponse
      */
-    public function reducirMora(Request $request, Cuota $cuota)
+    public function reducirMora(Request $request, Cuota $cuota, ReducirMora $reductorDeMora)
     {
+        // 1. Validar la entrada HTTP
+        $validated = $request->validate([
+            'porcentaje_reduccion' => 'required|numeric|min:1|max:100',
+        ]);
+
         try {
-            // 1. Validar la entrada
-            $validated = $request->validate([
-                'porcentaje_reduccion' => 'required|numeric|min:1|max:100',
-            ]);
+            // 2. Envolver la lógica en una transacción de base de datos
+            $cuotaActualizada = DB::transaction(function () use ($reductorDeMora, $cuota, $validated) {
+                // 3. Delegar toda la lógica de negocio al servicio
+                return $reductorDeMora->execute($cuota, $validated['porcentaje_reduccion']);
+            });
 
-            // 2. Verificar condiciones
-            if ($cuota->cargo_mora <= 0) {
-                return response()->json(['message' => 'Esta cuota no tiene mora para reducir.'], 422);
-            }
-            if ($cuota->reduccion_mora_aplicada) {
-                return response()->json(['message' => 'Ya se ha aplicado una reducción de mora a esta cuota.'], 422);
-            }
-
-            // 3. Iniciar transacción
-            DB::beginTransaction();
-
-            $porcentaje = $validated['porcentaje_reduccion'];
-            $moraOriginal = $cuota->cargo_mora;
-            
-            // 4. Calcular el nuevo valor de la mora
-            $montoAReducir = $moraOriginal * ($porcentaje / 100);
-            $nuevaMora = $moraOriginal - $montoAReducir;
-
-            // 5. Actualizar la cuota en la base de datos
-            $cuota->update([
-                'cargo_mora' => $nuevaMora,
-                'mora_reducida' => $porcentaje,
-                'reduccion_mora_aplicada' => true,
-            ]);
-            
-            // 6. Confirmar transacción
-            DB::commit();
-
+            // 4. Devolver una respuesta de éxito
             return response()->json([
                 'type' => 'success',
                 'message' => 'Reducción de mora aplicada con éxito.',
-                'data' => $cuota->fresh(), // Devuelve la cuota actualizada
+                'data' => $cuotaActualizada,
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -84,12 +65,11 @@ class PrestamoController extends Controller
                 'details' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
+            // Captura cualquier excepción lanzada por el servicio
             return response()->json([
                 'type' => 'error',
-                'message' => 'Error al aplicar la reducción de mora.',
-                'details' => $e->getMessage()
-            ], 500);
+                'message' => $e->getMessage(),
+            ], 422); // 422 Unprocessable Entity es apropiado para errores de lógica de negocio
         }
     }
 
