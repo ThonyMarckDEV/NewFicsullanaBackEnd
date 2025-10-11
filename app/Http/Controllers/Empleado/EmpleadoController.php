@@ -86,6 +86,7 @@ class EmpleadoController extends Controller
         // Construir el array de respuesta con la estructura deseada
         $responseData = [
             'id'    => $empleado->id,
+            'id_Rol' => $empleado->id_Rol,
             'datos' => [ 
                 'dni'             => optional($empleado->datos)->dni,
                 'nombre'          => optional($empleado->datos)->nombre,
