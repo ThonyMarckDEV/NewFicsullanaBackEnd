@@ -70,35 +70,55 @@ class EmpleadoController extends Controller
         }
     }
 
+    // /**
+    //  * Obtiene los datos de un empleado para la edición.
+    //  */
+    // public function show(User $empleado)
+    // {
+    //     // Verificar que el usuario sea realmente un empleado (Rol 3: Asesor, Rol 4: Cajero)
+    //     if (!in_array($empleado->id_Rol, [3, 4])) {
+    //         return response()->json(['message' => 'Usuario no es un empleado válido.'], 404);
+    //     }
+
+    //     // Cargar los datos relacionados para asegurar que estén disponibles
+    //     $empleado->load('datos');
+        
+    //     // Construir el array de respuesta con la estructura deseada
+    //     $responseData = [
+    //         'id'    => $empleado->id,
+    //         'id_Rol' => $empleado->id_Rol,
+    //         'datos' => [ 
+    //             'dni'             => optional($empleado->datos)->dni,
+    //             'nombre'          => optional($empleado->datos)->nombre,
+    //             'apellidoPaterno' => optional($empleado->datos)->apellidoPaterno,
+    //             'apellidoMaterno' => optional($empleado->datos)->apellidoMaterno,
+    //         ]
+    //     ];
+
+    //     return response()->json([
+    //         'type'    => 'success',
+    //         'message' => 'Empleado encontrado.',
+    //         'data'    => $responseData // Devolver solo el array estructurado
+    //     ]);
+    // }
+
     /**
      * Obtiene los datos de un empleado para la edición.
      */
     public function show(User $empleado)
     {
-        // Verificar que el usuario sea realmente un empleado (Rol 3: Asesor, Rol 4: Cajero)
-        if (!in_array($empleado->id_Rol, [3, 4])) {
+        // Verificar que el usuario sea realmente un empleado
+        if (!in_array($empleado->id_Rol, [3, 4])) { // rol 3 asesor, rol 4 cajero
             return response()->json(['message' => 'Usuario no es un empleado válido.'], 404);
         }
 
-        // Cargar los datos relacionados para asegurar que estén disponibles
+        // Cargar los datos relacionados
         $empleado->load('datos');
-        
-        // Construir el array de respuesta con la estructura deseada
-        $responseData = [
-            'id'    => $empleado->id,
-            'id_Rol' => $empleado->id_Rol,
-            'datos' => [ 
-                'dni'             => optional($empleado->datos)->dni,
-                'nombre'          => optional($empleado->datos)->nombre,
-                'apellidoPaterno' => optional($empleado->datos)->apellidoPaterno,
-                'apellidoMaterno' => optional($empleado->datos)->apellidoMaterno,
-            ]
-        ];
 
         return response()->json([
             'type'    => 'success',
             'message' => 'Empleado encontrado.',
-            'data'    => $responseData // Devolver solo el array estructurado
+            'data'    => $empleado
         ]);
     }
 
