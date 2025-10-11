@@ -10,15 +10,30 @@ class UpdatePrestamoRequest extends FormRequest
 {
     /**
      * Determina si el usuario está autorizado para realizar esta solicitud.
+     *
+     * La autorización se concede solo si el préstamo fue generado hoy
+     * Y no tiene ninguna cuota pagada.
      */
     public function authorize(): bool
     {
+        // Se obtiene la instancia del modelo Prestamo desde la ruta.
         $prestamo = $this->route('prestamo');
-        return Carbon::parse($prestamo->fecha_generacion)->isToday();
+
+        // 1. Verifica si el préstamo tiene alguna cuota con estado 2 (pagada).
+        //    El método `doesntExist()` es más eficiente que `!exists()`.
+        $noTieneCuotasPagadas = $prestamo->cuota()->where('estado', 2)->doesntExist();
+
+        // 2. Verifica si la fecha de generación del préstamo es el día de hoy.
+        $esDeHoy = Carbon::parse($prestamo->fecha_generacion)->isToday();
+
+        // El usuario está autorizado solo si ambas condiciones son verdaderas.
+        return $esDeHoy && $noTieneCuotasPagadas;
     }
 
     /**
      * Obtiene las reglas de validación que aplican a la solicitud.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
      */
     public function rules(): array
     {
