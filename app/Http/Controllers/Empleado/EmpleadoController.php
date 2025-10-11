@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class EmpleadoController extends Controller
 {
+
     /**
      * Obtiene la lista de empleados con paginación y filtros.
      */
@@ -41,6 +42,24 @@ class EmpleadoController extends Controller
 
         // Paginación por 10 ítems
         $empleados = $query->paginate(10);
+        // ---- INICIO DE LA MODIFICACIÓN ----
+        // Transforma los datos manteniendo la estructura anidada.
+        $empleados->through(function ($empleado) {
+            return [
+                // Campos del objeto principal (User)
+                'id' => $empleado->id,
+                'id_Rol' => $empleado->id_Rol ,
+                'estado' => $empleado->estado,
+                
+                // Objeto anidado 'datos' con solo los campos necesarios
+                'datos' => [
+                    'dni' => $empleado->datos->dni,
+                    'nombre' => $empleado->datos->nombre,
+                    'apellidoPaterno' => $empleado->datos->apellidoPaterno,
+                    'apellidoMaterno' => $empleado->datos->apellidoMaterno,
+                ]
+            ];
+        });
 
         return response()->json($empleados);
     }
