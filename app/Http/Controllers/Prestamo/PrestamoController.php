@@ -79,7 +79,7 @@ class PrestamoController extends Controller
      */
     public function index(
         Request $request,
-        VerificarCuotasPagadas $verificador,
+        VerificarCuotasPagadas $verificadorCuotasPagadas,
         AdjuntarCronogramaUrl $adjuntadorUrl,
         CalcularMora $calculadorMora
     ) {
@@ -114,39 +114,40 @@ class PrestamoController extends Controller
         $prestamos = $prestamosQuery->orderBy('id', 'desc')->paginate(10);
 
         // Usa los servicios para transformar la colección
-        $prestamos->getCollection()->transform(function ($prestamo) use ($verificador, $adjuntadorUrl, $calculadorMora) {
+        $prestamos->getCollection()->transform(function ($prestamo) use ($verificadorCuotasPagadas, $adjuntadorUrl, $calculadorMora) {
             
-            // a. Ejecuta los servicios que actualizan el estado en la BD (esto no cambia)
+            // a. Ejecuta los servicios que podrían actualizar la BD
             if ($prestamo->cuota) {
                 foreach ($prestamo->cuota as $item_cuota) {
                     $calculadorMora->execute($item_cuota);
                 }
             }
-            $verificador->execute($prestamo);
             
-            // b. Recarga el modelo para tener la versión más actualizada
-            $prestamoRefrescado = $prestamo->fresh(['cliente.datos']);
+            // b. Recarga el modelo para tener la versión más actualizada desde la BD
+            // Esto asegura que cualquier cambio hecho por 'calculadorMora' se refleje.
+            $prestamo->refresh();
 
-            // c. Adjunta la URL al modelo ya refrescado (esto no cambia)
-            $adjuntadorUrl->execute($prestamoRefrescado);
-            
-            // d. Construye y devuelve un array 
+            // c. Ahora, con el modelo actualizado, ejecuta los servicios que añaden datos para la respuesta
+            $verificadorCuotasPagadas->execute($prestamo); // Añade 'tiene_cuotas_pagadas'
+            $adjuntadorUrl->execute($prestamo);             // Añade 'cronograma_url'
+
+            // d. Construye y devuelve el array final usando el único objeto $prestamo, que ahora tiene todo
             return [
-                'id' => $prestamoRefrescado->id,
-                'monto' => $prestamoRefrescado->monto,
-                'frecuencia' => $prestamoRefrescado->frecuencia,
-                'fecha_generacion' => $prestamoRefrescado->fecha_generacion,
-                'estado' => $prestamoRefrescado->estado,
-                'interes' => $prestamoRefrescado->interes,
-                'total' => $prestamoRefrescado->total,
-                'cronograma_url' => $prestamoRefrescado->cronograma_url,
+                'id' => $prestamo->id,
+                'monto' => $prestamo->monto,
+                'frecuencia' => $prestamo->frecuencia,
+                'fecha_generacion' => $prestamo->fecha_generacion,
+                'estado' => $prestamo->estado,
+                'interes' => $prestamo->interes,
+                'total' => $prestamo->total,
+                'cronograma_url' => $prestamo->cronograma_url,
+                'tiene_cuotas_pagadas' => $prestamo->tiene_cuotas_pagadas,
                 'cliente' => [
-                    // Y dentro de cliente, el objeto 'datos'
                     'datos' => [
-                        'nombre' => optional($prestamoRefrescado->cliente->datos)->nombre,
-                        'apellidoPaterno' => optional($prestamoRefrescado->cliente->datos)->apellidoPaterno,
-                        'apellidoMaterno' => optional($prestamoRefrescado->cliente->datos)->apellidoMaterno,
-                        'dni' => optional($prestamoRefrescado->cliente->datos)->dni,
+                        'nombre' => optional($prestamo->cliente->datos)->nombre,
+                        'apellidoPaterno' => optional($prestamo->cliente->datos)->apellidoPaterno,
+                        'apellidoMaterno' => optional($prestamo->cliente->datos)->apellidoMaterno,
+                        'dni' => optional($prestamo->cliente->datos)->dni,
                     ]
                 ]
             ];
@@ -228,25 +229,6 @@ class PrestamoController extends Controller
         // 5. Devuelve el array modificado como JSON
         return response()->json($data);
     }
-
-    //  /**
-    //  * Muestra los detalles de un préstamo, incluyendo la URL del comprobante de cada cuota pagada.
-    //  *
-    //  * @param Prestamo $prestamo
-    //  * @param AdjuntarComprobanteUrl $adjuntador El servicio para adjuntar las URLs.
-    //  * @return \Illuminate\Http\JsonResponse
-    //  */
-    // public function show(Prestamo $prestamo, AdjuntarComprobanteUrl $adjuntadorcomprobante , AdjuntarCapturaPagoUrl $adjuntadorcapturapago)
-    // {
-    //     // Carga las relaciones principales
-    //     $prestamo->load(['cliente.datos', 'asesor.datos', 'producto', 'cuota']);
-
-    //     // 2. Delegar la lógica de adjuntar URLs al servicio
-    //     $adjuntadorcomprobante->execute($prestamo->cuota, $prestamo);
-    //     $adjuntadorcapturapago->execute($prestamo->cuota, $prestamo);
-
-    //     return response()->json($prestamo);
-    // }
 
       /**
      * Update the specified resource in storage.
