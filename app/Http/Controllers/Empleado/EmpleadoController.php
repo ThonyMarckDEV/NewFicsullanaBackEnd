@@ -75,18 +75,29 @@ class EmpleadoController extends Controller
      */
     public function show(User $empleado)
     {
-        // Verificar que el usuario sea realmente un empleado
-        if (!in_array($empleado->id_Rol, [3, 4])) { // rol 3 asesor, rol 4 cajero
+        // Verificar que el usuario sea realmente un empleado (Rol 3: Asesor, Rol 4: Cajero)
+        if (!in_array($empleado->id_Rol, [3, 4])) {
             return response()->json(['message' => 'Usuario no es un empleado válido.'], 404);
         }
 
-        // Cargar los datos relacionados
+        // Cargar los datos relacionados para asegurar que estén disponibles
         $empleado->load('datos');
+        
+        // Construir el array de respuesta con la estructura deseada
+        $responseData = [
+            'id'    => $empleado->id,
+            'datos' => [ 
+                'dni'             => optional($empleado->datos)->dni,
+                'nombre'          => optional($empleado->datos)->nombre,
+                'apellidoPaterno' => optional($empleado->datos)->apellidoPaterno,
+                'apellidoMaterno' => optional($empleado->datos)->apellidoMaterno,
+            ]
+        ];
 
         return response()->json([
             'type'    => 'success',
             'message' => 'Empleado encontrado.',
-            'data'    => $empleado
+            'data'    => $responseData // Devolver solo el array estructurado
         ]);
     }
 

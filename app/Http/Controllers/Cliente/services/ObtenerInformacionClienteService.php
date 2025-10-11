@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cliente\services;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth; // Importa el Facade de Autenticación
 
 /**
  * Servicio encargado de cargar y formatear toda la información de un cliente.
@@ -27,7 +28,29 @@ class ObtenerInformacionClienteService
      */
     public function execute(User $cliente): array
     {
-        // 1. Cargar todas las relaciones necesarias para una consulta eficiente.
+        // 1. Obtener el usuario autenticado que está realizando la solicitud.
+        $authenticatedUser = Auth::user();
+
+        // 2. VERIFICAR ROL: Si el usuario es un Cajero (rol 4), devolver solo datos limitados.
+        if ($authenticatedUser && $authenticatedUser->id_Rol === 4) {
+            
+            // Cargamos solo la relación 'datos' para obtener el nombre.
+            $cliente->load('datos');
+
+            // Devolvemos una estructura simple y segura.
+            return [
+                'id'=> $cliente->id,
+                'datos' => [ 
+                    'nombre'          => optional($cliente->datos)->nombre,
+                    'apellidoPaterno' => optional($cliente->datos)->apellidoPaterno,
+                    'apellidoMaterno' => optional($cliente->datos)->apellidoMaterno,
+                ]
+            ];
+        }
+
+        // 3. LÓGICA ORIGINAL PARA ADMINS Y OTROS ROLES: Si no es cajero, devuelve todo.
+        
+        // Cargar todas las relaciones necesarias para una consulta eficiente.
         $cliente->load([
             'rol',
             'prestamos',
@@ -38,21 +61,21 @@ class ObtenerInformacionClienteService
             'avales'
         ]);
 
-        // 2. Usar el servicio inyectado para calcular la modalidad del cliente.
+        // Usar el servicio inyectado para calcular la modalidad del cliente.
         $modalidadClienteCalculada = $this->modalidadClienteService->obtenerModalidad($cliente);
 
-        // 3. Construir la estructura de datos final para la respuesta.
+        // Construir la estructura de datos final y completa para la respuesta.
         return [
-            'id' => $cliente->id,
-            'username' => $cliente->username,
-            'estado' => $cliente->estado,
-            'datos' => optional($cliente->datos)->getAttributes(),
+            'id'                => $cliente->id,
+            'username'          => $cliente->username,
+            'estado'            => $cliente->estado,
+            'datos'             => optional($cliente->datos)->getAttributes(),
             'modalidad_cliente' => $modalidadClienteCalculada,
-            'direcciones' => optional($cliente->datos)->direcciones,
-            'contactos' => optional($cliente->datos)->contactos,
-            'empleos' => optional($cliente->datos)->empleos,
+            'direcciones'       => optional($cliente->datos)->direcciones,
+            'contactos'         => optional($cliente->datos)->contactos,
+            'empleos'           => optional($cliente->datos)->empleos,
             'cuentas_bancarias' => optional($cliente->datos)->cuentasBancarias,
-            'avales' => $cliente->avales,
+            'avales'            => $cliente->avales,
         ];
     }
 }
