@@ -74,8 +74,7 @@ class AuthController extends Controller
                 'message' => 'Login exitoso',
                 'access_token' => $tokens['access_token'],
                 'refresh_token' => $tokens['refresh_token'],
-                'idRefreshToken' => $tokens['idRefreshToken'],
-            ], 200);
+            ], 200);    
         } catch (\Exception $e) {
             Log::error('Error en login: ' . $e->getMessage());
             return response()->json([
@@ -85,7 +84,7 @@ class AuthController extends Controller
         }
     }
 
-    /**
+   /**
      * Refresh access token using refresh token.
      *
      * @param Request $request
@@ -94,7 +93,7 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         // Validate request
-        $validator = AuthValidations::validateRefreshToken($request);
+        $validator = AuthValidations::validateRefreshToken($request); // <- Usa la validación estándar
         if ($validator->fails()) {
             Log::warning('Validación de refresh token fallida: ' . json_encode($validator->errors()));
             return response()->json([
@@ -104,7 +103,7 @@ class AuthController extends Controller
         }
 
         try {
-            // Decode refresh token
+
             $secret = config('jwt.secret');
             if (!$secret) {
                 Log::error('JWT_SECRET no está definido en config');
@@ -114,7 +113,7 @@ class AuthController extends Controller
             $payload = JWT::decode($request->refresh_token, new Key($secret, 'HS256'));
             Log::info('Payload decodificado: ' . json_encode($payload));
 
-            // Verify token type
+
             if (!isset($payload->type) || $payload->type !== 'refresh') {
                 Log::warning('Token no es de tipo refresh: ' . json_encode($payload));
                 return response()->json([
@@ -122,13 +121,26 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Find user
+
             $user = User::with('rol')->find($payload->sub);
             if (!$user) {
                 Log::error('Usuario no encontrado para sub: ' . $payload->sub);
                 return response()->json([
                     'message' => 'Usuario no encontrado',
                 ], 404);
+            }
+
+
+            $storedToken = DB::table('refresh_tokens')
+                ->where('id_Usuario', $user->id)
+                ->where('token', $request->refresh_token) 
+                ->first();
+
+            if (!$storedToken) {
+                Log::warning('Refresh token no encontrado en la BD (posiblemente revocado) para usuario: ' . $user->id);
+                return response()->json([
+                    'message' => 'Token no válido o no autorizado',
+                ], 401);
             }
 
             // Generate new access token only
@@ -143,6 +155,8 @@ class AuthController extends Controller
             ], 200);
         } catch (\Firebase\JWT\ExpiredException $e) {
             Log::error('Refresh token expirado: ' . $e->getMessage());
+            // Si expira, también lo borramos de la BD
+            DB::table('refresh_tokens')->where('token', $request->refresh_token)->delete();
             return response()->json([
                 'message' => 'Refresh token expirado',
             ], 401);
@@ -168,8 +182,8 @@ class AuthController extends Controller
      */
     public function validateRefreshToken(Request $request)
     {
-        // Validate request
-        $validator = AuthValidations::validateRefreshTokenValidation($request);
+
+        $validator = AuthValidations::validateRefreshToken($request);
         if ($validator->fails()) {
             return response()->json([
                 'valid' => false,
@@ -179,10 +193,9 @@ class AuthController extends Controller
         }
 
         try {
-            // Check refresh token in database
+
             $refreshToken = DB::table('refresh_tokens')
-                ->where('id', $request->refresh_token_id)
-                ->where('id_Usuario', $request->userID)
+                ->where('token', $request->refresh_token)
                 ->first();
 
             if (!$refreshToken) {
@@ -192,11 +205,10 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Check if token has expired
+
             if ($refreshToken->expires_at && now()->greaterThan($refreshToken->expires_at)) {
                 DB::table('refresh_tokens')
-                    ->where('id', $request->refresh_token_id)
-                    ->where('id_Usuario', $request->userID)
+                    ->where('token', $request->refresh_token)
                     ->delete();
 
                 return response()->json([
@@ -226,7 +238,8 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        // Validate request
+
+
         $validator = AuthValidations::validateLogout($request);
         if ($validator->fails()) {
             return response()->json([
@@ -235,9 +248,8 @@ class AuthController extends Controller
             ], 400);
         }
 
-        // Delete refresh token
         $deleted = DB::table('refresh_tokens')
-            ->where('id', $request->idToken)
+            ->where('token', $request->refresh_token)
             ->delete();
 
         if ($deleted) {
